@@ -1,0 +1,46 @@
+{
+  "presets": ["latest", "stage-2"],
+
+  "plugins":
+  [
+    "add-module-exports",
+    ["module-resolver", {
+      "root": ["."],
+      "alias":
+      {
+        "tjsdoc/src": "tjsdoc/dist",
+        "tjsdoc-babylon/src": "tjsdoc-babylon/dist",
+        "tjsdoc-publisher-static-html/src": "tjsdoc-publisher-static-html/dist",
+        "tjsdoc-runtime-common/src": "tjsdoc-runtime-common/dist"
+      }
+    }],
+    "transform-runtime"
+  ],
+
+  "env":
+  {
+    "tjsdoc-dev":
+    {
+      "plugins":
+      [
+        "add-module-exports",
+        ["module-resolver", {
+          "root": [".", "../tjsdoc-runtime-common/", "../tjsdoc-babylon/"],
+          "cwd": "babelrc",
+          "alias":
+          {
+            "tjsdoc": "./src/TJSDoc.js",
+            "tjsdoc-babylon": "../tjsdoc-babylon/src/TJSDocBabylon.js",
+            "tjsdoc-publisher-static-html": "./tjsdoc-publisher-static-html/src/publish.js",
+            "tjsdoc-runtime-common": "../tjsdoc-runtime-common/src/",
+
+            "tjsdoc/src": "./src",
+            "tjsdoc-babylon/src": "../tjsdoc-babylon/src",
+            "tjsdoc-runtime-common/src": "../tjsdoc-runtime-common/src"
+          }
+        }],
+        "transform-runtime"
+      ]
+    }
+  }
+}

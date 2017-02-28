@@ -1,40 +1,63 @@
 {
   "name": "tjsdoc",
   "version": "0.0.1",
-  "description": "Provides a modern JS documentation system for ES6+ &amp; Typescript.",
-  "homepage": "https://github.com/typhonjs-doc/tjsdoc",
+  "description": "A forthcoming modern JS documentation system for ES6+ and Typescript.",
+  "author": "typhonrt",
+  "homepage": "https://tjsdoc.typhonjs.io/",
   "license": "MPL-2.0",
-  "author": {
-    "name": "Mike Leahy"
-  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/typhonjs-doc/tjsdoc.git"
-  },
-  "maintainers": [
-    {
-      "name": "Mike Leahy",
-      "email": "support@typhonjs.io",
-      "url": "https://github.com/typhonrt"
-    }
-  ],
-  "dependencies": {
-  },
-  "devDependencies": {
-    "typhonjs-config-eslint": "^0.4.0",
-    "typhonjs-npm-build-test": "^0.4.0"
+    "url": "https://github.com/typhonjs-node-tjsdoc/tjsdoc"
   },
   "scripts": {
+    "build": "babel-node ./node_modules/typhonjs-npm-scripts-build-babel/scripts/build.js",
+    "eslint": "eslint .",
+    "dev-test": "BABEL_ENV=tjsdoc-dev babel-node ./node_modules/typhonjs-npm-scripts-test-mocha/scripts/mocha.js dev_test",
+    "dev-test-coverage": "BABEL_ENV=tjsdoc-dev babel-node ./node_modules/typhonjs-npm-scripts-test-mocha/scripts/mocha-istanbul.js dev_test",
+    "dev-test-npm": "BABEL_ENV=tjsdoc-dev babel-node ./node_modules/typhonjs-npm-scripts-test-mocha/scripts/mocha.js dev_test_npm",
+    "dev-tjsdoc": "BABEL_ENV=tjsdoc-dev babel-node ./src/TJSDocCLI.js -c .tjsdocrc-local",
+    "prepublish": "babel-node ./node_modules/typhonjs-npm-scripts-publish/scripts/prepublish.js",
+    "test": "babel-node ./node_modules/typhonjs-npm-scripts-test-mocha/scripts/mocha.js",
+    "test-coverage": "babel-node ./node_modules/typhonjs-npm-scripts-test-mocha/scripts/mocha-istanbul.js",
+    "tjsdoc": "babel-node ./src/TJSDocCLI.js -c .tjsdocrc"
+  },
+  "dependencies": {
+    "babel-polyfill": "^6.0.0",
+    "babel-runtime": "^6.0.0",
+    "backbone-esnext-eventbus": "^0.3.0",
+    "minimist": "^1.0.0",
+    "strip-json-comments": "^2.0.0",
+    "typhonjs-color-logger": "<=0.1.0",
+    "typhonjs-plugin-manager": "^0.1.0"
+  },
+  "devDependencies": {
+    "tjsdoc-test-utils": "git+https://git@github.com/typhonjs-node-tjsdoc/tjsdoc-test-utils.git",
+    "tjsdoc-tests-ecmascript": "git+https://git@github.com/typhonjs-node-tjsdoc/tjsdoc-tests-ecmascript.git",
+    "typhonjs-config-eslint": "^0.5.0",
+    "typhonjs-npm-build-test": "^0.6.0"
   },
   "keywords": [
+    "typhonjs",
+    "javascript", "JS",
+    "typescript", "TS",
+    "jsdoc",
+    "api",
+    "document",
+    "documentation",
+    "ES6", "ECMAScript6", "ES2015", "ECMAScript2015",
+    "ES7", "ECMAScript7", "ES2016", "ECMAScript2016",
+    "ES8", "ECMAScript8", "ES2017", "ECMAScript2017"
   ],
   "files": [
     "dist",
     "src",
     "AUTHORS.md"
   ],
-  "directories": {},
+  "main": "dist/TJSDoc.js",
+  "bin": {
+     "esdoc": "dist/TJSDocCLI.js"
+  },
   "bugs": {
-    "url": "https://github.com/typhonjs-doc/tjsdoc/issues"
+    "url": "https://github.com/typhonjs-node-tjsdoc/tjsdoc/issues"
   }
 }
