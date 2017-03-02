@@ -17,7 +17,7 @@
 
   "test": {
     "type": "mocha",
-    "source": "./test/src"
+    "source": "./node_modules/tjsdoc-tests-ecmascript/test/src"
   },
 
   "title": "TJSDoc",
