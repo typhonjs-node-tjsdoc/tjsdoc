@@ -50,7 +50,9 @@
   ],
   "files": [
     "dist",
+    "manual",
     "src",
+    ".tjsdocrc",
     "AUTHORS.md"
   ],
   "main": "dist/TJSDoc.js",
