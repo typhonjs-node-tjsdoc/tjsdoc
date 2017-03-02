@@ -70,7 +70,7 @@ const targets =
 /**
  * Defines local test category overrides.
  *
- * @type {{config: boolean, doc: boolean, html: boolean, html_doc: boolean}}
+ * @type {{cli: boolean, config: boolean, html: boolean, html_doc: boolean, runtime_babylon: boolean, runtime_common: boolean}}
  */
 const category =
 {
