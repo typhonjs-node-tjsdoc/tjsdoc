@@ -22,6 +22,10 @@ process.env.TJSDOC_ENV = process.env.BABEL_ENV === 'tjsdoc-dev' ? 'development' 
  */
 export default class TJSDoc
 {
+   /**
+    * Path to `package.json` for TJSDoc.
+    * @type {string}
+    */
    static tjsdocPackagePath = path.resolve(__dirname, '../package.json');
 
    /**
