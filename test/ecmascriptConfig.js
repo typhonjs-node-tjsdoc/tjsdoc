@@ -46,16 +46,8 @@ if (addTargets.default)
       name: 'default',
       cli: path.resolve('./src/TJSDocCLI.js'),
       tjsdoc: path.resolve('./src/TJSDoc.js'),
-      runtime:
-      {
-         name: 'tjsdoc-babylon',
-         target: path.resolve('../tjsdoc-babylon/src/TJSDocBabylon.js')
-      },
-      publisher:
-      {
-         name: 'tjsdoc-publisher-static-html',
-         target: path.resolve('../tjsdoc-publisher-static-html/src/publish.js')
-      },
+      runtime: path.resolve('../tjsdoc-babylon/src/TJSDocBabylon.js'),
+      publisher: path.resolve('../tjsdoc-publisher-static-html/src/publish.js'),
       type: 'ecmascript'
    });
 }
@@ -84,9 +76,10 @@ const category =
 {
    cli: true,
    config: true,
-   doc: true,
    html: true,
-   html_doc: true
+   html_doc: true,
+   runtime_babylon: true,
+   runtime_common: true
 };
 
 const consoleSilent = true;
