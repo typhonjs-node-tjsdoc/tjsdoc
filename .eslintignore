@@ -2,5 +2,3 @@ coverage/
 dist/
 docs/
 node_modules/
-
-tjsdoc-publisher-static-html/template
