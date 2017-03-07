@@ -358,8 +358,14 @@ export default class TJSDoc
        astData, eventbus));
 
       // Create event binding for _generateFile
-      eventbus.on('tjsdoc:file:generate:doc:data', (filePath, docData = [], astData = [], logErrors) =>
-       this._generateFile(filePath, config, packageName, mainFilePath, docData, astData, eventbus, logErrors), this);
+      eventbus.on('tjsdoc:file:generate:doc:data:log:errors',
+       (filePath, docData = [], astData = [], logErrors = true) =>
+        this._generateFile(filePath, config, packageName, mainFilePath, docData, astData, eventbus, logErrors), this);
+
+      // Create event binding for _generateFile that automatically throws errors.
+      eventbus.on('tjsdoc:file:generate:doc:data:throw:errors',
+       (filePath, docData = [], astData = [], logErrors = false) =>
+        this._generateFile(filePath, config, packageName, mainFilePath, docData, astData, eventbus, logErrors), this);
    }
 
    /**
