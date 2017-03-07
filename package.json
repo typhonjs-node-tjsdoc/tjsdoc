@@ -16,10 +16,7 @@
     "dev-test-coverage": "BABEL_ENV=tjsdoc-dev babel-node ./node_modules/typhonjs-npm-scripts-test-mocha/scripts/mocha-istanbul.js dev_test",
     "dev-test-npm": "BABEL_ENV=tjsdoc-dev babel-node ./node_modules/typhonjs-npm-scripts-test-mocha/scripts/mocha.js dev_test_npm",
     "dev-tjsdoc": "BABEL_ENV=tjsdoc-dev babel-node ./src/TJSDocCLI.js -c .tjsdocrc-local",
-    "prepublish": "babel-node ./node_modules/typhonjs-npm-scripts-publish/scripts/prepublish.js",
-    "test": "babel-node ./node_modules/typhonjs-npm-scripts-test-mocha/scripts/mocha.js",
-    "test-coverage": "babel-node ./node_modules/typhonjs-npm-scripts-test-mocha/scripts/mocha-istanbul.js",
-    "tjsdoc": "babel-node ./src/TJSDocCLI.js -c .tjsdocrc"
+    "prepublish": "babel-node ./node_modules/typhonjs-npm-scripts-publish/scripts/prepublish.js"
   },
   "dependencies": {
     "babel-polyfill": "^6.0.0",
