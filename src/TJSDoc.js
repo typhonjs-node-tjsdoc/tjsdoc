@@ -116,6 +116,10 @@ export default class TJSDoc
          // Validate the config file checking for any improper or missing values after potential user modification.
          mainEventbus.triggerSync('tjsdoc:config:resolver:validate:post', config);
 
+         // Create RegExp instances for any includes / excludes definitions.
+         config._includes = config.includes.map((v) => new RegExp(v));
+         config._excludes = config.excludes.map((v) => new RegExp(v));
+
          // Set log level.
          mainEventbus.trigger('log:set:level', config.logLevel);
 
@@ -207,7 +211,7 @@ export default class TJSDoc
          // Allows any plugins to modify document data.
          docData = pluginManager.invokeSyncEvent('onHandleDocData', void 0, { docData }).docData;
 
-         // Create an event binding to return all ast data.
+         // Create an event binding to return the raw doc data.
          localEventProxy.on('tjsdoc:get:doc:data', () => { return docData; });
 
          // Optionally remove source code from all file / testFile document data.
@@ -228,8 +232,17 @@ export default class TJSDoc
          mainEventbus.trigger('log:info:raw', `publishing with: ${
           typeof config.publisher === 'object' ? config.publisher.name : config.publisher}`);
 
+         // Create an event proxy specifically for invoking the publisher module. In certain situations like
+         // in a plugin that provides file watch / incremental documentation generation the publisher may be invoked
+         // many times, so pass in a proxy and destroy it after to clean up any resources to ensure that publishing
+         // can be invoked again.
+         const publishEventProxy = pluginManager.createEventProxy();
+
          // Invoke publisher which should create the final documentation output.
-         mainEventbus.trigger('tjsdoc:publisher:publish', localEventProxy);
+         mainEventbus.trigger('tjsdoc:publisher:publish', publishEventProxy);
+
+         // Destroy the publisher event proxy.
+         publishEventProxy.destroy();
 
          // If documentation linting is enabled then output any lint warnings.
          if (config.docLint) { mainEventbus.trigger('tjsdoc:log:lint:doc:warnings'); }
@@ -237,20 +250,26 @@ export default class TJSDoc
          // Output any invalid code warnings / errors.
          mainEventbus.trigger('tjsdoc:log:invalid:code');
 
-         // Invoke a final handler to plugins signalling that processing is complete.
-         pluginManager.invokeSyncEvent('onComplete');
+         // Invoke a final handler to plugins signalling that initial processing is complete.
+         const keepAlive = pluginManager.invokeSyncEvent('onComplete', void 0, { keepAlive: false }).keepAlive;
 
-         // Remove any local event bindings.
-         localEventProxy.destroy();
+         // There are cases when a plugin may want to continue processing in an ongoing manner such as
+         // `tjsdoc-plugin-watcher` that provides live regeneration of document generation. If keepAlive is true then
+         // the plugin manager and local event bindings are not destroyed.
+         if (!keepAlive)
+         {
+            // Remove any local event bindings.
+            localEventProxy.destroy();
 
-         // Must destroy all plugins and have them and pluginManager unregister from the eventbus.
-         pluginManager.destroy();
+            // Must destroy all plugins and have them and pluginManager unregister from the eventbus.
+            pluginManager.destroy();
+         }
       }
       catch (err)
       {
          let packageData;
 
-         if (!config.fullStackTrace)
+         if (config && !config.fullStackTrace)
          {
             // Obtain a filtered stack trace from the logger.
             const traceInfo = mainEventbus.triggerSync('log:get:trace:info', err);
@@ -322,10 +341,6 @@ export default class TJSDoc
     */
    static _generate(config, packageObj, docData, astData, eventbus)
    {
-      // Create RegExp instances for any includes / excludes definitions.
-      const includes = config.includes.map((v) => new RegExp(v));
-      const excludes = config.excludes.map((v) => new RegExp(v));
-
       const packageName = packageObj.name || void 0;
       const mainFilePath = packageObj.main || void 0;
 
@@ -338,40 +353,73 @@ export default class TJSDoc
          config._sourceGlobs = result.globs;
       }
 
-      // Walk all source
-      config.sourceFiles.forEach((filePath) =>
+      // Walk all source.
+      config.sourceFiles.forEach((filePath) => this._generateFile(filePath, config, packageName, mainFilePath, docData,
+       astData, eventbus));
+
+      // Create event binding for _generateFile
+      eventbus.on('tjsdoc:file:generate:doc:data', (filePath, docData = [], astData = [], logErrors) =>
+       this._generateFile(filePath, config, packageName, mainFilePath, docData, astData, eventbus, logErrors), this);
+   }
+
+   /**
+    * Generates doc data from a file path and supporting data. Please see the `tjsdoc:file:generate:doc:data` event
+    * binding which provides a simpler invocation pattern.
+    *
+    * @param {string}         filePath - Doc data is generated from this file path.
+    *
+    * @param {TJSDocConfig}   config - config for generating.
+    *
+    * @param {string}         [packageName] - Package name of the target project.
+    *
+    * @param {string}         [mainFilePath] - Main entry point from `package.json` of the target project.
+    *
+    * @param {DocObject[]}    [docData] - DocObject data is pushed to this array.
+    *
+    * @param {ASTData[]}      [astData] - AST data is pushed to this array.
+    *
+    * @param {EventProxy}     eventbus - An instance of backbone-esnext-events.
+    *
+    * @param {boolean}        [logErrors] - When true errors are silently logged with InvalidCodeLogger. When false
+    *                                       parsing errors are thrown which is useful when watching files.
+    *
+    * @returns {*}
+    * @private
+    */
+   static _generateFile(filePath, config, packageName, mainFilePath, docData = [], astData = [], eventbus, logErrors)
+   {
+      const relativeFilePath = path.relative(config._dirPath, filePath);
+
+      let match = false;
+
+      for (const reg of config._includes)
       {
-         const relativeFilePath = path.relative(config._dirPath, filePath);
-
-         let match = false;
-
-         for (const reg of includes)
+         if (relativeFilePath.match(reg))
          {
-            if (relativeFilePath.match(reg))
-            {
-               match = true;
-               break;
-            }
+            match = true;
+            break;
          }
+      }
 
-         if (!match) { return; }
+      if (!match) { return void 0; }
 
-         for (const reg of excludes)
-         {
-            if (relativeFilePath.match(reg)) { return; }
-         }
+      for (const reg of config._excludes)
+      {
+         if (relativeFilePath.match(reg)) { return void 0; }
+      }
 
-         eventbus.trigger('log:info:raw', `parse: ${filePath}`);
+      eventbus.trigger('log:info:raw', `parse: ${filePath}`);
 
-         const temp = eventbus.triggerSync('tjsdoc:traverse:file', config._dirPath, filePath, packageName,
-          mainFilePath);
+      const temp = eventbus.triggerSync('tjsdoc:traverse:file', config._dirPath, filePath, packageName, mainFilePath,
+       logErrors);
 
-         if (!temp) { return; }
+      if (!temp) { return void 0; }
 
-         docData.push(...temp.docData);
+      docData.push(...temp.docData);
 
-         astData.push({ filePath: relativeFilePath, ast: temp.ast });
-      });
+      astData.push({ filePath: relativeFilePath, ast: temp.ast });
+
+      return { docData, astData };
    }
 
    /**
