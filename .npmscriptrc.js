@@ -10,10 +10,6 @@ var config =
    {
       "babel": { "source": "src", "destination": "dist" },
 
-      // Copy templates
-      // TODO REMOVE
-//      "copy": [{ "source": "./src/Publisher/Builder/template", "destination": "./dist/Publisher/Builder/template/" }],
-
       // chmod the CLI entry point to executable.
       "chmod": [{ "path": "./dist/TJSDocCLI.js", "mode": "755" }]
    },
