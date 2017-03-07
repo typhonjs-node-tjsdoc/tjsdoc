@@ -4,13 +4,12 @@
   "publisher": "tjsdoc-publisher-static-html",
   "runtime": "tjsdoc-babylon",
 
-  "source": ["src", "tjsdoc-babylon/src", "tjsdoc-runtime-common/src", "tjsdoc-publisher-static-html/src"],
+  "source": ["src"],
   "destination": "docs",
   "access": ["public", "protected", "private"],
   "builtinPluginVirtual": true,
   "debug": false,
   "emptyDestination": true,
-  "excludes": ["src-publisher/template/"],
   "index": "./README.md",
   "unexportIdentifier": true,
   "package": "./package.json",
@@ -20,8 +19,8 @@
     "source": "./node_modules/tjsdoc-tests-ecmascript/test/src"
   },
 
-  "title": "TJSDoc",
-
+  "title": "TJSDoc"//,
+/*
   "publisherOptions": {
     "manual": {
       "asset": "./manual/asset",
@@ -35,4 +34,5 @@
       "changelog": ["./CHANGELOG.md"]
     }
   }
+*/
 }
