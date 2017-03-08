@@ -70,24 +70,23 @@ export default class TJSDoc
       // Load the logger plugin and enable auto plugin filters which adds inclusive filters for all plugins added.
       // In addition add inclusive log trace filter to limit info and trace to just tjsdoc source.
       pluginManager.add(
-         {
-            name: 'typhonjs-color-logger',
-            options: {
-               autoPluginFilters: true,
-               filterConfigs: [
-                  {
-                     type: 'inclusive',
-                     name: 'tjsdoc',
-                     filterString: '(tjsdoc\/dist|tjsdoc\/src)'
-                  }
-               ]
-            }
-         });
+      {
+         name: 'typhonjs-color-logger',
+         options: {
+            autoPluginFilters: true,
+            filterConfigs: [
+               {
+                  type: 'inclusive',
+                  name: 'tjsdoc',
+                  filterString: '(tjsdoc\/dist|tjsdoc\/src)'
+               }
+            ]
+         }
+      });
 
       try
       {
-         if (typeof config !== 'object')
-         { throw new TypeError(`'config' is not an 'object'`); }
+         if (typeof config !== 'object') { throw new TypeError(`'config' is not an 'object'`); }
 
          // Set `global.$$tjsdoc_version` and add an event binding to get the TJSDoc version.
          s_SET_VERSION(this.tjsdocPackagePath, runtimeEventProxy);
@@ -105,40 +104,61 @@ export default class TJSDoc
 
          // Allow any plugins which may alter `config.runtime` a chance to do so before loading. Add
          // `config.runtimeOptions` to plugin config.
-         pluginManager.add(typeof config.runtime === 'object' ? Object.assign({ options: config.runtimeOptions },
-          config.runtime) : { name: config.runtime, options: config.runtimeOptions });
+         pluginManager.add(typeof config.runtime === 'object' ?
+          Object.assign({ options: config.runtimeOptions }, config.runtime) :
+           { name: config.runtime, options: config.runtimeOptions });
 
          mainEventbus.trigger('log:info:raw', `environment: ${process.env.TJSDOC_ENV}`);
+
          mainEventbus.trigger('log:info:raw', `runtime: ${
           typeof config.runtime === 'object' ? config.runtime.name : config.runtime}`);
 
-         // Resolve the config file including any extensions and set any missing config values.
+         // Resolve the config file including any extensions and set any default config values.
          config = mainEventbus.triggerSync('tjsdoc:config:resolver:resolve', config);
 
          // Add all user specified plugins.
          pluginManager.addAll(config.plugins);
 
          // Allow external plugins to modify the config file.
-         config = pluginManager.invokeSyncEvent('onHandleConfig', { config }).config;
+         pluginManager.invokeSyncEvent('onHandleConfig', void 0, { config });
 
          // Validate the config file checking for any improper or missing values after potential user modification.
          mainEventbus.triggerSync('tjsdoc:config:resolver:validate:post', config);
 
+         // Create an event binding to return all ast data.
+         runtimeEventProxy.on('tjsdoc:get:ast:data', () => { return astData; });
+
+         // Create an event binding to return the raw doc data.
+         runtimeEventProxy.on('tjsdoc:get:doc:data', () => { return docData; });
+
          // Create RegExp instances for any includes / excludes definitions.
          config._includes = config.includes.map((v) => new RegExp(v));
          config._excludes = config.excludes.map((v) => new RegExp(v));
+
+         // Create an event binding to filter out source code in provided `docData` based on `config.includeSource`.
+         runtimeEventProxy.on('tjsdoc:data:doc:filter:include:source', (docData) =>
+         {
+            // Optionally remove source code from all file / testFile document data.
+            if (!config.includeSource)
+            {
+               for (const value of docData)
+               {
+                  if (['file', 'testFile'].includes(value.kind) && 'content' in value) { value.content = ''; }
+               }
+            }
+         });
 
          // Set log level.
          mainEventbus.trigger('log:set:level', config.logLevel);
 
          // Set `typhonjs-file-util` compress format / relative path and lock it from being changed.
          mainEventbus.trigger('typhonjs:util:file:set:options',
-            {
-               compressFormat: config.compressFormat,
-               logEvent: 'log:info:raw',
-               relativePath: config.destination,
-               lockRelative: true
-            });
+         {
+            compressFormat: config.compressFormat,
+            logEvent: 'log:info:raw',
+            relativePath: config.destination,
+            lockRelative: true
+         });
 
          // Make sure that either `config.source` or `config.sourceFiles` is defined.
          if (!Array.isArray(config.sourceFiles) && typeof config.source === 'undefined')
@@ -148,11 +168,11 @@ export default class TJSDoc
             throw error;
          }
 
-         // The path of where TJSDoc has been executed from..
-         config._dirPath = path.resolve('.');
+         // The current working path of where TJSDoc has been executed from; the target project.
+         config._dirPath = process.cwd();
 
          // Add all virtual / remote typedef & external references from dependent NPM modules. This should only
-         // be enabled when building TJSDoc documentation.
+         // be enabled when building documentation for TJSDoc itself.
          if (typeof config.builtinPluginVirtual === 'boolean' && config.builtinPluginVirtual)
          {
             pluginManager.addAll(
@@ -168,12 +188,12 @@ export default class TJSDoc
          }
 
          // Allow any plugins which may alter `config.publisher` a chance to do so before loading. Add
-         // `config.publisherOptions` to plugin config.
+         // `config.publisherOptions` to the config to set particular options passed to the publisher.
          pluginManager.add(typeof config.publisher === 'object' ?
           Object.assign({ options: config.publisherOptions }, config.publisher) :
            { name: config.publisher, options: config.publisherOptions });
 
-         // Load target repo `package.json` and set event bindings for retrieving resources.
+         // Load target repo `package.json`
          if (config.package)
          {
             try
@@ -184,17 +204,12 @@ export default class TJSDoc
             { /* nop */ }
          }
 
+         // set event bindings for retrieving `package.json` related resources.
          runtimeEventProxy.on('tjsdoc:get:package:object', () => { return packageObj; });
 
          // Provide an override to `typhonjs:util:package:get:data` to set the default package.
          runtimeEventProxy.on('tjsdoc:get:package:data', (packageObject = packageObj) =>
-            runtimeEventProxy.triggerSync('typhonjs:util:package:get:data', packageObject));
-
-         // Create an event binding to return all ast data.
-         runtimeEventProxy.on('tjsdoc:get:ast:data', () => { return astData; });
-
-         // Create an event binding to return the raw doc data.
-         runtimeEventProxy.on('tjsdoc:get:doc:data', () => { return docData; });
+          runtimeEventProxy.triggerSync('typhonjs:util:package:get:data', packageObject));
 
          // If `config.sourceFiles` is not defined then hydrate `config.source` as source globs.
          if (!Array.isArray(config.sourceFiles))
@@ -203,6 +218,11 @@ export default class TJSDoc
 
             config.sourceFiles = result.files;
             config._sourceGlobs = result.globs;
+         }
+         else
+         {
+            // If `config.sourceFiles` is defined then make a copy of `sourceFiles` assigning it as `_sourceGlobs`.
+            config._sourceGlobs = JSON.parse(JSON.stringify(config.sourceFiles));
          }
 
          if (config.test)
@@ -215,8 +235,15 @@ export default class TJSDoc
                config.test.sourceFiles = result.files;
                config.test._sourceGlobs = result.globs;
             }
+            else
+            {
+               // If `config.test.sourceFiles` is defined then make a copy of `test.sourceFiles` assigning it as
+               // `test._sourceGlobs`.
+               config.test._sourceGlobs = JSON.parse(JSON.stringify(config.test.sourceFiles));
+            }
          }
 
+         // Invoke the main runtime documentation generation.
          s_GENERATE(config);
       }
       catch (err)
@@ -347,12 +374,12 @@ function s_GENERATE(config)
       // Invoke `onStart` plugin callback to signal the start of TJSDoc processing.
       mainEventbus.trigger('plugins:invoke:sync:event', 'onStart', { config });
 
-      // Generate document data for all source code storing it in `docData` and `astData`.
-      s_GENERATE_ALL(config, packageObj, docData, astData, runtimeEventProxy);
+      // Generate document data for all source code storing it in `docData` and `astData`. Also sets up the runtime
+      // event bindings for single file generation which any plugin may utilize.
+      s_GENERATE_ALL_FILES(config, packageObj, docData, astData, runtimeEventProxy);
 
       // Invoke callback for plugins to load any virtual code.
-      const virtualCode = mainEventbus.triggerSync('plugins:invoke:sync:event', 'onHandleVirtual', void 0,
-       { code: [] }).code;
+      const virtualCode = mainEventbus.triggerSync('plugins:invoke:sync:event', 'onHandleVirtual', { code: [] }).code;
 
       // If there is any virtual code to load then process it. This is useful for dynamically loading external and
       // typedef code references.
@@ -371,24 +398,23 @@ function s_GENERATE(config)
          });
       }
 
-      // If tests are defined then generate documentation for them.
-      if (config.test) { s_GENERATE_FOR_TEST(config, docData, astData, runtimeEventProxy); }
+      // If tests are defined then generate documentation for all test files.
+      if (config.test) { s_GENERATE_ALL_TESTS(config, docData, astData, runtimeEventProxy); }
 
       // Allows any plugins to modify document data.
       mainEventbus.trigger('plugins:invoke:sync:event', 'onHandleDocData', void 0, { docData });
 
-      // TODO: make an event binding
-      // Optionally remove source code from all file / testFile document data.
-      if (!config.includeSource)
-      {
-         for (const value of docData)
-         {
-            if (['file', 'testFile'].includes(value.kind) && 'content' in value) { value.content = ''; }
-         }
-      }
+      // Remove source code from file and test file doc data if `config.includeSource` is false.
+      mainEventbus.trigger('tjsdoc:data:doc:filter:include:source', docData);
 
       // Invoke common runtime event binding to create DocDB.
-      mainEventbus.trigger('tjsdoc:create:doc:db', docData);
+      const docDB = mainEventbus.triggerSync('tjsdoc:data:docdb:create', docData);
+
+      // Add the docDB as a plugin making it accessible via event bindings to all plugins.
+      mainEventbus.trigger('plugins:add', { name: 'tjsdoc-doc-database', instance: docDB });
+
+      // Allows any plugins to modify document database directly.
+      mainEventbus.trigger('plugins:invoke:sync:event', 'onHandleDocDB', void 0, { docDB });
 
       // Invoke core doc resolver which resolves various properties of the DocDB.
       mainEventbus.trigger('tjsdoc:core:doc:resolver:resolve');
@@ -452,7 +478,7 @@ function s_GENERATE(config)
  *
  * @param {EventProxy}        eventbus - An instance of backbone-esnext-events.
  */
-function s_GENERATE_ALL(config, packageObj, docData, astData, eventbus)
+function s_GENERATE_ALL_FILES(config, packageObj, docData, astData, eventbus)
 {
    const packageName = packageObj.name || void 0;
    const mainFilePath = packageObj.main || void 0;
@@ -470,6 +496,56 @@ function s_GENERATE_ALL(config, packageObj, docData, astData, eventbus)
    eventbus.on('tjsdoc:file:generate:doc:data:throw:errors',
     (filePath, docData = [], astData = [], logErrors = false) =>
      s_GENERATE_FILE(filePath, config, packageName, mainFilePath, docData, astData, eventbus, logErrors), this);
+}
+
+/**
+ * Generate documentation for test code.
+ *
+ * @param {TJSDocConfig}   config - config for generating.
+ *
+ * @param {DocObject[]}       docData - The target project DocObject data.
+ *
+ * @param {ASTData[]}         astData - The target project AST data.
+ *
+ * @param {EventProxy}     eventbus - An instance of backbone-esnext-events.
+ */
+function s_GENERATE_ALL_TESTS(config, docData, astData, eventbus)
+{
+   const includes = config.test.includes.map((v) => new RegExp(v));
+   const excludes = config.test.excludes.map((v) => new RegExp(v));
+
+   config.test.sourceFiles.forEach((filePath) =>
+   {
+      const relativeFilePath = path.relative(config._dirPath, filePath);
+
+      let match = false;
+
+      for (const reg of includes)
+      {
+         if (relativeFilePath.match(reg))
+         {
+            match = true;
+            break;
+         }
+      }
+
+      if (!match) { return; }
+
+      for (const reg of excludes)
+      {
+         if (relativeFilePath.match(reg)) { return; }
+      }
+
+      mainEventbus.trigger('log:info:raw', `parse: ${filePath}`);
+
+      const temp = eventbus.triggerSync('tjsdoc:traverse:test', config.test.type, config._dirPath, filePath);
+
+      if (!temp) { return; }
+
+      docData.push(...temp.docData);
+
+      astData.push({ filePath: `test${path.sep}${relativeFilePath}`, ast: temp.ast });
+   });
 }
 
 /**
@@ -533,56 +609,6 @@ function s_GENERATE_FILE(filePath, config, packageName, mainFilePath, docData = 
 }
 
 /**
- * Generate documentation for test code.
- *
- * @param {TJSDocConfig}   config - config for generating.
- *
- * @param {DocObject[]}       docData - The target project DocObject data.
- *
- * @param {ASTData[]}         astData - The target project AST data.
- *
- * @param {EventProxy}     eventbus - An instance of backbone-esnext-events.
- */
-function s_GENERATE_FOR_TEST(config, docData, astData, eventbus)
-{
-   const includes = config.test.includes.map((v) => new RegExp(v));
-   const excludes = config.test.excludes.map((v) => new RegExp(v));
-
-   config.test.sourceFiles.forEach((filePath) =>
-   {
-      const relativeFilePath = path.relative(config._dirPath, filePath);
-
-      let match = false;
-
-      for (const reg of includes)
-      {
-         if (relativeFilePath.match(reg))
-         {
-            match = true;
-            break;
-         }
-      }
-
-      if (!match) { return; }
-
-      for (const reg of excludes)
-      {
-         if (relativeFilePath.match(reg)) { return; }
-      }
-
-      mainEventbus.trigger('log:info:raw', `parse: ${filePath}`);
-
-      const temp = eventbus.triggerSync('tjsdoc:traverse:test', config.test.type, config._dirPath, filePath);
-
-      if (!temp) { return; }
-
-      docData.push(...temp.docData);
-
-      astData.push({ filePath: `test${path.sep}${relativeFilePath}`, ast: temp.ast });
-   });
-}
-
-/**
  * Cleans up any resources before regenerating documentation.
  */
 function s_REGENERATE()
@@ -590,18 +616,25 @@ function s_REGENERATE()
    // Disable the regenerate event binding.
    mainEventbus.off('tjsdoc:regenerate', s_REGENERATE);
 
-   // Retrieve the
+   // Retrieve the target project config.
    const config = mainEventbus.triggerSync('tjsdoc:get:config', false);
 
+   // Remove any existing DocDB.
+   mainEventbus.trigger('plugins:remove', 'tjsdoc-doc-database');
+
+   // Remove existing file doc dat generation event bindings.
    mainEventbus.off('tjsdoc:file:generate:doc:data:log:errors');
    mainEventbus.off('tjsdoc:file:generate:doc:data:throw:errors');
 
+   // Reset AST and doc data.
    mainEventbus.triggerSync('tjsdoc:get:ast:data').length = 0;
    mainEventbus.triggerSync('tjsdoc:get:doc:data').length = 0;
 
-   // Invoke `onRegenerate` plugin callback to signal that TJSDoc is regenerating the project target.
+   // Invoke `onRegenerate` plugin callback to signal that TJSDoc is regenerating the project target. This allows
+   // any internal / external plugins to reset data as necessary.
    mainEventbus.trigger('plugins:invoke:sync:event', 'onRegenerate', { config });
 
+   // Invoke the main runtime documentation generation.
    s_GENERATE(config);
 }
 
