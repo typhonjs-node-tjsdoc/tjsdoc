@@ -41,6 +41,53 @@ export default class TJSDocCLI
    }
 
    /**
+    * create config object from config file.
+    *
+    * @param {string} configPath - config file path.
+    *
+    * @return {TJSDocConfig} config object.
+    * @private
+    */
+   _createConfigFromFile(configPath)
+   {
+      configPath = path.resolve(configPath);
+
+      const ext = path.extname(configPath);
+
+      if (ext === '.js')
+      {
+         return require(configPath);
+      }
+      else
+      {
+         const configJSON = fs.readFileSync(configPath, { encode: 'utf8' }).toString();
+
+         return JSON.parse(stripJsonComments(configJSON));
+      }
+   }
+
+   /**
+    * create config object from package.json.
+    *
+    * @return {TJSDocConfig|null} config object.
+    * @private
+    */
+   _createConfigFromPackageJSON()
+   {
+      try
+      {
+         const filePath = path.resolve('./package.json');
+         const packageJSON = fs.readFileSync(filePath, 'utf8').toString();
+         const packageObj = JSON.parse(packageJSON);
+
+         return packageObj.tjsdoc;
+      }
+      catch (err) { /* nop */ }
+
+      return null;
+   }
+
+   /**
     * execute to generate document.
     *
     * @param {Object}   [runtime=TJSDoc] - The TJSDoc runtime to invoke.
@@ -95,6 +142,43 @@ export default class TJSDocCLI
    }
 
    /**
+    * find TJSDoc config file.
+    *
+    * @returns {string|null} config file path.
+    * @private
+    */
+   _findConfigFilePath()
+   {
+      if (this._argv.c) { return this._argv.c; }
+
+      const testResolve = (configPath) =>
+      {
+         const filePath = path.resolve(configPath);
+
+         fs.readFileSync(filePath);
+
+         return filePath;
+      };
+
+      try { return testResolve('./.tjsdocrc'); }
+      catch (err) { /* nop */ }
+
+      try { return testResolve('./.tjsdocrc.js'); }
+      catch (err) { /* nop */ }
+
+      try { return testResolve('./.tjsdocrc.json'); }
+      catch (err) { /* nop */ }
+
+      try { return testResolve('./.tjsdoc.js'); }
+      catch (err) { /* nop */ }
+
+      try { return testResolve('./.tjsdoc.json'); }
+      catch (err) { /* nop */ }
+
+      return null;
+   }
+
+   /**
     * show help of TJSDoc
     *
     * @private
@@ -146,90 +230,6 @@ export default class TJSDocCLI
       {
          console.log('0.0.0');
       }
-   }
-
-   /**
-    * find TJSDoc config file.
-    *
-    * @returns {string|null} config file path.
-    * @private
-    */
-   _findConfigFilePath()
-   {
-      if (this._argv.c) { return this._argv.c; }
-
-      const testResolve = (configPath) =>
-      {
-         const filePath = path.resolve(configPath);
-
-         fs.readFileSync(filePath);
-
-         return filePath;
-      };
-
-      try { return testResolve('./.tjsdocrc'); }
-      catch (err) { /* nop */ }
-
-      try { return testResolve('./.tjsdocrc.js'); }
-      catch (err) { /* nop */ }
-
-      try { return testResolve('./.tjsdocrc.json'); }
-      catch (err) { /* nop */ }
-
-      try { return testResolve('./.tjsdoc.js'); }
-      catch (err) { /* nop */ }
-
-      try { return testResolve('./.tjsdoc.json'); }
-      catch (err) { /* nop */ }
-
-      return null;
-   }
-
-   /**
-    * create config object from config file.
-    *
-    * @param {string} configPath - config file path.
-    *
-    * @return {TJSDocConfig} config object.
-    * @private
-    */
-   _createConfigFromFile(configPath)
-   {
-      configPath = path.resolve(configPath);
-
-      const ext = path.extname(configPath);
-
-      if (ext === '.js')
-      {
-         return require(configPath);
-      }
-      else
-      {
-         const configJSON = fs.readFileSync(configPath, { encode: 'utf8' }).toString();
-
-         return JSON.parse(stripJsonComments(configJSON));
-      }
-   }
-
-   /**
-    * create config object from package.json.
-    *
-    * @return {TJSDocConfig|null} config object.
-    * @private
-    */
-   _createConfigFromPackageJSON()
-   {
-      try
-      {
-         const filePath = path.resolve('./package.json');
-         const packageJSON = fs.readFileSync(filePath, 'utf8').toString();
-         const packageObj = JSON.parse(packageJSON);
-
-         return packageObj.tjsdoc;
-      }
-      catch (err) { /* nop */ }
-
-      return null;
    }
 }
 
