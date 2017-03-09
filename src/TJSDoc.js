@@ -65,7 +65,8 @@ export default class TJSDoc
        */
       const runtimeEventProxy = pluginManager.createEventProxy();
 
-      runtimeEventProxy.on('tjsdoc:get:runtime:event:proxy', () => runtimeEventProxy);
+      // Add an event binding to return the runtime event proxy.
+      runtimeEventProxy.on('tjsdoc:event:proxy:runtime:get', () => runtimeEventProxy);
 
       // Load the logger plugin and enable auto plugin filters which adds inclusive filters for all plugins added.
       // In addition add inclusive log trace filter to limit info and trace to just tjsdoc source.
@@ -131,6 +132,18 @@ export default class TJSDoc
          // Create an event binding to return the raw doc data.
          runtimeEventProxy.on('tjsdoc:get:doc:data', () => { return docData; });
 
+         // Set log level.
+         mainEventbus.trigger('log:set:level', config.logLevel);
+
+         // Set `typhonjs-file-util` compress format / relative path and lock it from being changed.
+         mainEventbus.trigger('typhonjs:util:file:set:options',
+         {
+            compressFormat: config.compressFormat,
+            logEvent: 'log:info:raw',
+            relativePath: config.destination,
+            lockRelative: true
+         });
+
          // Create RegExp instances for any includes / excludes definitions.
          config._includes = config.includes.map((v) => new RegExp(v));
          config._excludes = config.excludes.map((v) => new RegExp(v));
@@ -146,18 +159,6 @@ export default class TJSDoc
                   if (['file', 'testFile'].includes(value.kind) && 'content' in value) { value.content = ''; }
                }
             }
-         });
-
-         // Set log level.
-         mainEventbus.trigger('log:set:level', config.logLevel);
-
-         // Set `typhonjs-file-util` compress format / relative path and lock it from being changed.
-         mainEventbus.trigger('typhonjs:util:file:set:options',
-         {
-            compressFormat: config.compressFormat,
-            logEvent: 'log:info:raw',
-            relativePath: config.destination,
-            lockRelative: true
          });
 
          // Make sure that either `config.source` or `config.sourceFiles` is defined.
@@ -200,11 +201,10 @@ export default class TJSDoc
             {
                packageObj = require(path.resolve(config.package));
             }
-            catch (err)
-            { /* nop */ }
+            catch (err) { /* nop */ }
          }
 
-         // set event bindings for retrieving `package.json` related resources.
+         // Create event bindings for retrieving `package.json` related resources.
          runtimeEventProxy.on('tjsdoc:get:package:object', () => { return packageObj; });
 
          // Provide an override to `typhonjs:util:package:get:data` to set the default package.
@@ -362,7 +362,7 @@ function s_GENERATE(config)
    {
       const dirPath = path.resolve(__dirname);
 
-      const runtimeEventProxy = mainEventbus.triggerSync('tjsdoc:get:runtime:event:proxy');
+      const runtimeEventProxy = mainEventbus.triggerSync('tjsdoc:event:proxy:runtime:get');
 
       const astData = mainEventbus.triggerSync('tjsdoc:get:ast:data');
       const docData = mainEventbus.triggerSync('tjsdoc:get:doc:data');
@@ -444,7 +444,7 @@ function s_GENERATE(config)
       mainEventbus.on('tjsdoc:regenerate', s_REGENERATE);
 
       // Invoke a final handler to plugins signalling that initial processing is complete.
-      const keepAlive = mainEventbus.triggerSync('plugins:invoke:sync:event', 'onComplete', void 0,
+      const keepAlive = mainEventbus.triggerSync('plugins:invoke:sync:event', 'onComplete',
        { keepAlive: false }).keepAlive;
 
       // There are cases when a plugin may want to continue processing in an ongoing manner such as
@@ -453,7 +453,7 @@ function s_GENERATE(config)
       if (!keepAlive)
       {
          // Remove any runtime event bindings.
-         mainEventbus.triggerSync('tjsdoc:get:runtime:event:proxy').off();
+         mainEventbus.triggerSync('tjsdoc:event:proxy:runtime:get').off();
 
          // Must destroy all plugins and have them and pluginManager unregister from the eventbus.
          mainEventbus.trigger('plugins:destroy:manager');
@@ -480,14 +480,15 @@ function s_GENERATE(config)
  */
 function s_GENERATE_ALL_FILES(config, packageObj, docData, astData, eventbus)
 {
+   // Attempt to determine the name of the target project module and any main file path.
    const packageName = packageObj.name || void 0;
    const mainFilePath = packageObj.main || void 0;
 
-   // Walk all source.
+   // For all source generate doc data.
    config.sourceFiles.forEach(
     (filePath) => s_GENERATE_FILE(filePath, config, packageName, mainFilePath, docData, astData, eventbus));
 
-   // Create event binding for s_GENERATE_FILE
+   // Create event binding for s_GENERATE_FILE that logs errors.
    eventbus.on('tjsdoc:file:generate:doc:data:log:errors',
     (filePath, docData = [], astData = [], logErrors = true) =>
      s_GENERATE_FILE(filePath, config, packageName, mainFilePath, docData, astData, eventbus, logErrors), this);
@@ -511,9 +512,11 @@ function s_GENERATE_ALL_FILES(config, packageObj, docData, astData, eventbus)
  */
 function s_GENERATE_ALL_TESTS(config, docData, astData, eventbus)
 {
+   // Create RegExp instances for any includes / excludes definitions.
    const includes = config.test.includes.map((v) => new RegExp(v));
    const excludes = config.test.excludes.map((v) => new RegExp(v));
 
+   // For all test source generate doc data.
    config.test.sourceFiles.forEach((filePath) =>
    {
       const relativeFilePath = path.relative(config._dirPath, filePath);
@@ -578,6 +581,7 @@ function s_GENERATE_FILE(filePath, config, packageName, mainFilePath, docData = 
 
    let match = false;
 
+   // Match filePath against any includes / excludes RegExp instance.
    for (const reg of config._includes)
    {
       if (relativeFilePath.match(reg))
@@ -596,10 +600,13 @@ function s_GENERATE_FILE(filePath, config, packageName, mainFilePath, docData = 
 
    eventbus.trigger('log:info:raw', `parse: ${filePath}`);
 
+   // Traverse the file generating doc data.
    const temp = eventbus.triggerSync('tjsdoc:traverse:file', config._dirPath, filePath, packageName, mainFilePath,
     logErrors);
 
    if (!temp) { return void 0; }
+
+   // Push any generated doc and AST data output.
 
    docData.push(...temp.docData);
 
