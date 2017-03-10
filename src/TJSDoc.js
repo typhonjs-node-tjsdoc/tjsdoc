@@ -422,17 +422,8 @@ function s_GENERATE(config)
       mainEventbus.trigger('log:info:raw', `publishing with: ${
        typeof config.publisher === 'object' ? config.publisher.name : config.publisher}`);
 
-      // Create an event proxy specifically for invoking the publisher module. In certain situations like
-      // in a plugin that provides file watch / incremental documentation generation the publisher may be invoked
-      // many times, so pass in a proxy and destroy it after to clean up any resources to ensure that publishing
-      // can be invoked again.
-      const publishEventProxy = mainEventbus.triggerSync('plugins:create:event:proxy');
-
       // Invoke publisher which should create the final documentation output.
-      mainEventbus.trigger('tjsdoc:publisher:publish', publishEventProxy);
-
-      // Destroy the publisher event proxy.
-      publishEventProxy.destroy();
+      mainEventbus.trigger('tjsdoc:publisher:publish');
 
       // If documentation linting is enabled then output any lint warnings.
       if (config.docLint) { mainEventbus.trigger('tjsdoc:log:lint:doc:warnings'); }
