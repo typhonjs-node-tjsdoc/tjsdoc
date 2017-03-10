@@ -133,7 +133,7 @@ export default class TJSDoc
          runtimeEventProxy.on('tjsdoc:get:doc:data', () => { return docData; });
 
          // Set log level.
-         mainEventbus.trigger('log:set:level', config.logLevel);
+         mainEventbus.trigger('log:level:set', config.logLevel);
 
          // Set `typhonjs-file-util` compress format / relative path and lock it from being changed.
          mainEventbus.trigger('typhonjs:util:file:options:set',
@@ -182,7 +182,7 @@ export default class TJSDoc
                { name: 'typhonjs-plugin-manager/.tjsdoc/virtual/remote' }
             ]);
 
-            runtimeEventProxy.on('typhonjs:plugin:manager:added:plugin', (pluginData) =>
+            runtimeEventProxy.on('typhonjs:plugin:manager:plugin:added', (pluginData) =>
             {
                s_BUILTIN_PLUGIN_VIRTUAL(pluginData, pluginManager);
             });
@@ -298,7 +298,7 @@ function s_ERR_HANDLER(err, config)
    if (config && !config.fullStackTrace)
    {
       // Obtain a filtered stack trace from the logger.
-      const traceInfo = mainEventbus.triggerSync('log:get:trace:info', err);
+      const traceInfo = mainEventbus.triggerSync('log:trace:info:get', err);
 
       // Determine if error occurred in an NPM module. If so attempt to load to any associated
       // package.json for the detected NPM module and post a fatal log message noting as much.
