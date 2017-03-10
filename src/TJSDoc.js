@@ -136,7 +136,7 @@ export default class TJSDoc
          mainEventbus.trigger('log:set:level', config.logLevel);
 
          // Set `typhonjs-file-util` compress format / relative path and lock it from being changed.
-         mainEventbus.trigger('typhonjs:util:file:set:options',
+         mainEventbus.trigger('typhonjs:util:file:options:set',
          {
             compressFormat: config.compressFormat,
             logEvent: 'log:info:raw',
@@ -214,7 +214,7 @@ export default class TJSDoc
          // If `config.sourceFiles` is not defined then hydrate `config.source` as source globs.
          if (!Array.isArray(config.sourceFiles))
          {
-            const result = mainEventbus.triggerSync('typhonjs:util:file:hydrate:glob', config.source);
+            const result = mainEventbus.triggerSync('typhonjs:util:file:glob:hydrate', config.source);
 
             config.sourceFiles = result.files;
             config._sourceGlobs = result.globs;
@@ -230,7 +230,7 @@ export default class TJSDoc
             // If `config.test.sourceFiles` is not defined then hydrate `config.test.source` as source globs.
             if (!Array.isArray(config.test.sourceFiles))
             {
-               const result = mainEventbus.triggerSync('typhonjs:util:file:hydrate:glob', config.test.source);
+               const result = mainEventbus.triggerSync('typhonjs:util:file:glob:hydrate', config.test.source);
 
                config.test.sourceFiles = result.files;
                config.test._sourceGlobs = result.globs;
@@ -369,7 +369,7 @@ function s_GENERATE(config)
       const packageObj = mainEventbus.triggerSync('tjsdoc:get:package:object');
 
       // Potentially empty `config.destination` if `config.emptyDestination` is true via `typhonjs-file-util`.
-      if (config.emptyDestination) { mainEventbus.trigger('typhonjs:util:file:empty:relative:path'); }
+      if (config.emptyDestination) { mainEventbus.trigger('typhonjs:util:file:path:relative:empty'); }
 
       // Invoke `onStart` plugin callback to signal the start of TJSDoc processing.
       mainEventbus.trigger('plugins:invoke:sync:event', 'onStart', { config });
