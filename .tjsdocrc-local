@@ -2,6 +2,6 @@
 {
   "extends": ".tjsdocrc",
 
-  "publisher": "../tjsdoc-publisher-static-html/src/publish.js",
+  "publisher": "../tjsdoc-publisher-static-html/src/Publisher.js",
   "runtime": "../tjsdoc-babylon/src/TJSDocBabylon.js"
 }

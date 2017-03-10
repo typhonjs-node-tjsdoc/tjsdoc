@@ -35,7 +35,7 @@ if (addTargets.babylon)
       cli: path.resolve('../tjsdoc-babylon/src/TJSDocBabylonCLI.js'),
       tjsdoc: path.resolve('../tjsdoc-babylon/src/TJSDocBabylon.js'),
       runtime: path.resolve('../tjsdoc-babylon/src/TJSDocBabylon.js'),
-      publisher: path.resolve('../tjsdoc-publisher-static-html/src/publish.js'),
+      publisher: path.resolve('../tjsdoc-publisher-static-html/src/Publisher.js'),
       type: 'ecmascript'
    });
 }
@@ -47,7 +47,7 @@ if (addTargets.default)
       cli: path.resolve('./src/TJSDocCLI.js'),
       tjsdoc: path.resolve('./src/TJSDoc.js'),
       runtime: path.resolve('../tjsdoc-babylon/src/TJSDocBabylon.js'),
-      publisher: path.resolve('../tjsdoc-publisher-static-html/src/publish.js'),
+      publisher: path.resolve('../tjsdoc-publisher-static-html/src/Publisher.js'),
       type: 'ecmascript'
    });
 }
