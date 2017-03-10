@@ -207,9 +207,9 @@ export default class TJSDoc
          // Create event bindings for retrieving `package.json` related resources.
          runtimeEventProxy.on('tjsdoc:get:package:object', () => { return packageObj; });
 
-         // Provide an override to `typhonjs:util:package:get:data` to set the default package.
+         // Provide an override to `typhonjs:util:package:object:format` to set the default package.
          runtimeEventProxy.on('tjsdoc:get:package:data', (packageObject = packageObj) =>
-          runtimeEventProxy.triggerSync('typhonjs:util:package:get:data', packageObject));
+          runtimeEventProxy.triggerSync('typhonjs:util:package:object:format', packageObject));
 
          // If `config.sourceFiles` is not defined then hydrate `config.source` as source globs.
          if (!Array.isArray(config.sourceFiles))
@@ -302,7 +302,10 @@ function s_ERR_HANDLER(err, config)
 
       // Determine if error occurred in an NPM module. If so attempt to load to any associated
       // package.json for the detected NPM module and post a fatal log message noting as much.
-      packageData = mainEventbus.triggerSync('typhonjs:util:package:get:data:from:error', traceInfo.trace);
+      if (traceInfo)
+      {
+         packageData = mainEventbus.triggerSync('typhonjs:util:package:object:format:from:error', traceInfo.trace);
+      }
    }
 
    // If `_objectValidateError` is valid / true then this is a validation error via config resolution.
