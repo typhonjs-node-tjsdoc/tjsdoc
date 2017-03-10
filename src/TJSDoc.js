@@ -441,7 +441,7 @@ function s_GENERATE(config)
       mainEventbus.trigger('tjsdoc:invalid:code:log');
 
       // Add event binding allowing any plugins to regenerate the documentation during the `onComplete` callback.
-      mainEventbus.on('tjsdoc:regenerate', s_REGENERATE);
+      runtimeEventProxy.on('tjsdoc:regenerate', s_REGENERATE);
 
       // Invoke a final handler to plugins signalling that initial processing is complete.
       const keepAlive = mainEventbus.triggerSync('plugins:invoke:sync:event', 'onComplete',
@@ -453,7 +453,7 @@ function s_GENERATE(config)
       if (!keepAlive)
       {
          // Remove any runtime event bindings.
-         mainEventbus.triggerSync('tjsdoc:event:proxy:runtime:get').off();
+         runtimeEventProxy.off();
 
          // Must destroy all plugins and have them and pluginManager unregister from the eventbus.
          mainEventbus.trigger('plugins:destroy:manager');
