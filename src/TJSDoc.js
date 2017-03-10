@@ -93,7 +93,7 @@ export default class TJSDoc
          s_SET_VERSION(this.tjsdocPackagePath, runtimeEventProxy);
 
          // Create an event binding to return a copy of the config file.
-         runtimeEventProxy.on('tjsdoc:get:config', (copy = true) => copy ? JSON.parse(JSON.stringify(config)) : config);
+         runtimeEventProxy.on('tjsdoc:data:config:get', (copy = true) => copy ? JSON.parse(JSON.stringify(config)) : config);
 
          // Ensure that `config.runtime` is defined.
          if (config.runtime !== null && typeof config.runtime !== 'string' && typeof config.runtime !== 'object')
@@ -127,10 +127,10 @@ export default class TJSDoc
          mainEventbus.triggerSync('tjsdoc:config:resolver:validate:post', config);
 
          // Create an event binding to return all ast data.
-         runtimeEventProxy.on('tjsdoc:get:ast:data', () => { return astData; });
+         runtimeEventProxy.on('tjsdoc:data:ast:get', () => { return astData; });
 
          // Create an event binding to return the raw doc data.
-         runtimeEventProxy.on('tjsdoc:get:doc:data', () => { return docData; });
+         runtimeEventProxy.on('tjsdoc:data:doc:get', () => { return docData; });
 
          // Set log level.
          mainEventbus.trigger('log:level:set', config.logLevel);
@@ -205,10 +205,10 @@ export default class TJSDoc
          }
 
          // Create event bindings for retrieving `package.json` related resources.
-         runtimeEventProxy.on('tjsdoc:get:package:object', () => { return packageObj; });
+         runtimeEventProxy.on('tjsdoc:data:package:object:get', () => { return packageObj; });
 
-         // Provide an override to `typhonjs:util:package:object:format` to set the default package.
-         runtimeEventProxy.on('tjsdoc:get:package:data', (packageObject = packageObj) =>
+         // Provide an override to `typhonjs:util:package:object:format` to set a default package.
+         runtimeEventProxy.on('tjsdoc:data:package:object:format', (packageObject = packageObj) =>
           runtimeEventProxy.triggerSync('typhonjs:util:package:object:format', packageObject));
 
          // If `config.sourceFiles` is not defined then hydrate `config.source` as source globs.
@@ -367,9 +367,9 @@ function s_GENERATE(config)
 
       const runtimeEventProxy = mainEventbus.triggerSync('tjsdoc:event:proxy:runtime:get');
 
-      const astData = mainEventbus.triggerSync('tjsdoc:get:ast:data');
-      const docData = mainEventbus.triggerSync('tjsdoc:get:doc:data');
-      const packageObj = mainEventbus.triggerSync('tjsdoc:get:package:object');
+      const astData = mainEventbus.triggerSync('tjsdoc:data:ast:get');
+      const docData = mainEventbus.triggerSync('tjsdoc:data:doc:get');
+      const packageObj = mainEventbus.triggerSync('tjsdoc:data:package:object:get');
 
       // Potentially empty `config.destination` if `config.emptyDestination` is true via `typhonjs-file-util`.
       if (config.emptyDestination) { mainEventbus.trigger('typhonjs:util:file:path:relative:empty'); }
@@ -435,7 +435,7 @@ function s_GENERATE(config)
       mainEventbus.trigger('tjsdoc:invalid:code:log');
 
       // Add event binding allowing any plugins to regenerate the documentation during the `onComplete` callback.
-      runtimeEventProxy.on('tjsdoc:regenerate', s_REGENERATE);
+      runtimeEventProxy.on('tjsdoc:regenerate:all:docs', s_REGENERATE);
 
       // Invoke a final handler to plugins signalling that initial processing is complete.
       const keepAlive = mainEventbus.triggerSync('plugins:invoke:sync:event', 'onComplete',
@@ -483,12 +483,12 @@ function s_GENERATE_ALL_FILES(config, packageObj, docData, astData, eventbus)
     (filePath) => s_GENERATE_FILE(filePath, config, packageName, mainFilePath, docData, astData, eventbus));
 
    // Create event binding for s_GENERATE_FILE that logs errors.
-   eventbus.on('tjsdoc:file:generate:doc:data:log:errors',
+   eventbus.on('tjsdoc:generate:file:doc:data:log:errors',
     (filePath, docData = [], astData = [], logErrors = true) =>
      s_GENERATE_FILE(filePath, config, packageName, mainFilePath, docData, astData, eventbus, logErrors), this);
 
    // Create event binding for s_GENERATE_FILE that automatically throws errors.
-   eventbus.on('tjsdoc:file:generate:doc:data:throw:errors',
+   eventbus.on('tjsdoc:generate:file:doc:data:throw:errors',
     (filePath, docData = [], astData = [], logErrors = false) =>
      s_GENERATE_FILE(filePath, config, packageName, mainFilePath, docData, astData, eventbus, logErrors), this);
 }
@@ -615,21 +615,21 @@ function s_GENERATE_FILE(filePath, config, packageName, mainFilePath, docData = 
 function s_REGENERATE()
 {
    // Disable the regenerate event binding.
-   mainEventbus.off('tjsdoc:regenerate', s_REGENERATE);
+   mainEventbus.off('tjsdoc:regenerate:all:docs', s_REGENERATE);
 
    // Retrieve the target project config.
-   const config = mainEventbus.triggerSync('tjsdoc:get:config', false);
+   const config = mainEventbus.triggerSync('tjsdoc:data:config:get', false);
 
    // Remove any existing DocDB.
    mainEventbus.trigger('plugins:remove', 'tjsdoc-doc-database');
 
    // Remove existing file doc dat generation event bindings.
-   mainEventbus.off('tjsdoc:file:generate:doc:data:log:errors');
-   mainEventbus.off('tjsdoc:file:generate:doc:data:throw:errors');
+   mainEventbus.off('tjsdoc:generate:file:doc:data:log:errors');
+   mainEventbus.off('tjsdoc:generate:file:doc:data:throw:errors');
 
    // Reset AST and doc data.
-   mainEventbus.triggerSync('tjsdoc:get:ast:data').length = 0;
-   mainEventbus.triggerSync('tjsdoc:get:doc:data').length = 0;
+   mainEventbus.triggerSync('tjsdoc:data:ast:get').length = 0;
+   mainEventbus.triggerSync('tjsdoc:data:doc:get').length = 0;
 
    // Invoke `onRegenerate` plugin callback to signal that TJSDoc is regenerating the project target. This allows
    // any internal / external plugins to reset data as necessary.
@@ -654,7 +654,7 @@ function s_SET_VERSION(packageFilePath, eventbus)
 
       if (packageObj)
       {
-         eventbus.on('tjsdoc:get:version', () => { return packageObj.version; });
+         eventbus.on('tjsdoc:data:version:get', () => { return packageObj.version; });
 
          global.$$tjsdoc_version = packageObj.version;
       }
