@@ -369,7 +369,6 @@ function s_GENERATE(config)
 
       const astData = mainEventbus.triggerSync('tjsdoc:data:ast:get');
       const docData = mainEventbus.triggerSync('tjsdoc:data:doc:get');
-      const packageObj = mainEventbus.triggerSync('tjsdoc:data:package:object:get');
 
       // Potentially empty `config.destination` if `config.emptyDestination` is true via `typhonjs-file-util`.
       if (config.emptyDestination) { mainEventbus.trigger('typhonjs:util:file:path:relative:empty'); }
@@ -379,7 +378,7 @@ function s_GENERATE(config)
 
       // Generate document data for all source code storing it in `docData` and `astData`. Also sets up the runtime
       // event bindings for single file generation which any plugin may utilize.
-      s_GENERATE_ALL_FILES(config, packageObj, docData, astData, runtimeEventProxy);
+      s_GENERATE_ALL_FILES(config, docData, astData, runtimeEventProxy);
 
       // Invoke callback for plugins to load any virtual code.
       const virtualCode = mainEventbus.triggerSync('plugins:invoke:sync:event', 'onHandleVirtual', { code: [] }).code;
@@ -429,10 +428,10 @@ function s_GENERATE(config)
       mainEventbus.trigger('tjsdoc:publisher:publish');
 
       // If documentation linting is enabled then output any lint warnings.
-      if (config.docLint) { mainEventbus.trigger('tjsdoc:log:lint:doc:warnings'); }
+      if (config.docLint) { mainEventbus.trigger('tjsdoc:system:lint:docdb:log'); }
 
       // Output any invalid code warnings / errors.
-      mainEventbus.trigger('tjsdoc:invalid:code:log');
+      mainEventbus.trigger('tjsdoc:system:invalid:code:log');
 
       // Add event binding allowing any plugins to regenerate the documentation during the `onComplete` callback.
       runtimeEventProxy.on('tjsdoc:regenerate:all:docs', s_REGENERATE);
@@ -464,33 +463,27 @@ function s_GENERATE(config)
  *
  * @param {TJSDocConfig}      config - config for generating.
  *
- * @param {NPMPackageObject}  packageObj - The target project package object.
- *
  * @param {DocObject[]}       docData - The target project DocObject data.
  *
  * @param {ASTData[]}         astData - The target project AST data.
  *
  * @param {EventProxy}        eventbus - An instance of backbone-esnext-events.
  */
-function s_GENERATE_ALL_FILES(config, packageObj, docData, astData, eventbus)
+function s_GENERATE_ALL_FILES(config, docData, astData, eventbus)
 {
-   // Attempt to determine the name of the target project module and any main file path.
-   const packageName = packageObj.name || void 0;
-   const mainFilePath = packageObj.main || void 0;
-
    // For all source generate doc data.
    config.sourceFiles.forEach(
-    (filePath) => s_GENERATE_FILE(filePath, config, packageName, mainFilePath, docData, astData, eventbus));
+    (filePath) => s_GENERATE_FILE(filePath, config, docData, astData, eventbus));
 
    // Create event binding for s_GENERATE_FILE that logs errors.
    eventbus.on('tjsdoc:generate:file:doc:data:log:errors',
     (filePath, docData = [], astData = [], logErrors = true) =>
-     s_GENERATE_FILE(filePath, config, packageName, mainFilePath, docData, astData, eventbus, logErrors), this);
+     s_GENERATE_FILE(filePath, config, docData, astData, eventbus, logErrors), this);
 
    // Create event binding for s_GENERATE_FILE that automatically throws errors.
    eventbus.on('tjsdoc:generate:file:doc:data:throw:errors',
     (filePath, docData = [], astData = [], logErrors = false) =>
-     s_GENERATE_FILE(filePath, config, packageName, mainFilePath, docData, astData, eventbus, logErrors), this);
+     s_GENERATE_FILE(filePath, config, docData, astData, eventbus, logErrors), this);
 }
 
 /**
@@ -553,10 +546,6 @@ function s_GENERATE_ALL_TESTS(config, docData, astData, eventbus)
  *
  * @param {TJSDocConfig}   config - config for generating.
  *
- * @param {string}         [packageName] - Package name of the target project.
- *
- * @param {string}         [mainFilePath] - Main entry point from `package.json` of the target project.
- *
  * @param {DocObject[]}    [docData] - DocObject data is pushed to this array.
  *
  * @param {ASTData[]}      [astData] - AST data is pushed to this array.
@@ -569,7 +558,7 @@ function s_GENERATE_ALL_TESTS(config, docData, astData, eventbus)
  * @returns {*}
  * @private
  */
-function s_GENERATE_FILE(filePath, config, packageName, mainFilePath, docData = [], astData = [], eventbus, logErrors)
+function s_GENERATE_FILE(filePath, config, docData = [], astData = [], eventbus, logErrors)
 {
    const relativeFilePath = path.relative(config._dirPath, filePath);
 
@@ -595,8 +584,7 @@ function s_GENERATE_FILE(filePath, config, packageName, mainFilePath, docData = 
    eventbus.trigger('log:info:raw', `parse: ${filePath}`);
 
    // Traverse the file generating doc data.
-   const temp = eventbus.triggerSync('tjsdoc:traverse:file', config._dirPath, filePath, packageName, mainFilePath,
-    logErrors);
+   const temp = eventbus.triggerSync('tjsdoc:traverse:file', config._dirPath, filePath, logErrors);
 
    if (!temp) { return void 0; }
 
