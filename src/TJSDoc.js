@@ -439,13 +439,13 @@ function s_GENERATE(config)
       mainEventbus.trigger('plugins:invoke:sync:event', 'onHandleDocDB', void 0, { docDB });
 
       // Invoke core doc resolver which resolves various properties of the DocDB.
-      mainEventbus.trigger('tjsdoc:core:doc:resolver:resolve');
+      mainEventbus.trigger('tjsdoc:system:resolver:docdb:resolve');
 
       mainEventbus.trigger('log:info:raw', `publishing with: ${
        typeof config.publisher === 'object' ? config.publisher.name : config.publisher}`);
 
       // Invoke publisher which should create the final documentation output.
-      mainEventbus.trigger('tjsdoc:publisher:publish');
+      mainEventbus.trigger('tjsdoc:system:publisher:publish');
 
       // If documentation linting is enabled then output any lint warnings.
       if (config.docLint) { mainEventbus.trigger('tjsdoc:system:lint:docdb:log'); }
@@ -454,7 +454,7 @@ function s_GENERATE(config)
       mainEventbus.trigger('tjsdoc:system:invalid:code:log');
 
       // Add event binding allowing any plugins to regenerate the documentation during the `onComplete` callback.
-      runtimeEventProxy.on('tjsdoc:regenerate:all:docs', s_REGENERATE);
+      runtimeEventProxy.on('tjsdoc:system:regenerate:all:docs', s_REGENERATE);
 
       // Invoke a final handler to plugins signalling that initial processing is complete.
       const keepAlive = mainEventbus.triggerSync('plugins:invoke:sync:event', 'onComplete',
