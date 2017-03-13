@@ -127,7 +127,7 @@ export default class TJSDoc
          runtimeEventProxy.on('tjsdoc:data:ast:get', () => { return astData; });
 
          // Create an event binding to return the raw doc data.
-         runtimeEventProxy.on('tjsdoc:data:doc:get', () => { return docData; });
+         runtimeEventProxy.on('tjsdoc:data:docobj:get', () => { return docData; });
 
          // Set log level.
          mainEventbus.trigger('log:level:set', config.logLevel);
@@ -146,7 +146,7 @@ export default class TJSDoc
          config._excludes = config.excludes.map((v) => new RegExp(v));
 
          // Create an event binding to filter out source code in provided `docData` based on `config.includeSource`.
-         runtimeEventProxy.on('tjsdoc:data:doc:filter:include:source', (docData) =>
+         runtimeEventProxy.on('tjsdoc:system:docobj:filter:include:source', (docData) =>
          {
             // Optionally remove source code from all file / testFile document data.
             if (!config.includeSource)
@@ -381,7 +381,7 @@ function s_GENERATE(config)
       const runtimeEventProxy = mainEventbus.triggerSync('tjsdoc:event:proxy:runtime:get');
 
       const astData = mainEventbus.triggerSync('tjsdoc:data:ast:get');
-      const docData = mainEventbus.triggerSync('tjsdoc:data:doc:get');
+      const docData = mainEventbus.triggerSync('tjsdoc:data:docobj:get');
       const packageObj = mainEventbus.triggerSync('tjsdoc:data:package:object:get');
 
       // Potentially empty `config.destination` if `config.emptyDestination` is true via `typhonjs-file-util`.
@@ -427,7 +427,7 @@ function s_GENERATE(config)
       mainEventbus.trigger('plugins:invoke:sync:event', 'onHandleDocData', void 0, { docData });
 
       // Remove source code from file and test file doc data if `config.includeSource` is false.
-      mainEventbus.trigger('tjsdoc:data:doc:filter:include:source', docData);
+      mainEventbus.trigger('tjsdoc:system:docobj:filter:include:source', docData);
 
       // Invoke common runtime event binding to create DocDB.
       const docDB = mainEventbus.triggerSync('tjsdoc:data:docdb:create', docData);
@@ -494,7 +494,7 @@ function s_REGENERATE()
 
    // Reset AST and doc data.
    mainEventbus.triggerSync('tjsdoc:data:ast:get').length = 0;
-   mainEventbus.triggerSync('tjsdoc:data:doc:get').length = 0;
+   mainEventbus.triggerSync('tjsdoc:data:docobj:get').length = 0;
 
    // Invoke `onRegenerate` plugin callback to signal that TJSDoc is regenerating the project target. This allows
    // any internal / external plugins to reset data as necessary.
