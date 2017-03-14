@@ -483,8 +483,10 @@ function s_GENERATE(config)
  */
 function s_REGENERATE()
 {
+   const runtimeEventProxy = mainEventbus.triggerSync('tjsdoc:system:event:proxy:runtime:get');
+
    // Disable the regenerate event binding.
-   mainEventbus.off('tjsdoc:regenerate:all:docs', s_REGENERATE);
+   runtimeEventProxy.off('tjsdoc:system:regenerate:all:docs', s_REGENERATE);
 
    // Retrieve the target project config.
    const config = mainEventbus.triggerSync('tjsdoc:data:config:get');
@@ -498,7 +500,7 @@ function s_REGENERATE()
 
    // Invoke `onRegenerate` plugin callback to signal that TJSDoc is regenerating the project target. This allows
    // any internal / external plugins to reset data as necessary.
-   mainEventbus.trigger('plugins:invoke:sync:event', 'onRegenerate', { config });
+   mainEventbus.trigger('plugins:invoke:sync:event', 'onRegenerate', void 0, { config });
 
    // Invoke the main runtime documentation generation.
    s_GENERATE(config);
