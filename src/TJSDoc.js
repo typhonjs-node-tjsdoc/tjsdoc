@@ -66,7 +66,7 @@ export default class TJSDoc
       const runtimeEventProxy = pluginManager.createEventProxy();
 
       // Add an event binding to return the runtime event proxy.
-      runtimeEventProxy.on('tjsdoc:event:proxy:runtime:get', () => runtimeEventProxy);
+      runtimeEventProxy.on('tjsdoc:system:event:proxy:runtime:get', () => runtimeEventProxy);
 
       // Load the logger plugin and enable auto plugin filters which adds inclusive filters for all plugins added.
       // In addition add inclusive log trace filter to limit info and trace to just tjsdoc source.
@@ -378,7 +378,7 @@ function s_GENERATE(config)
 {
    try
    {
-      const runtimeEventProxy = mainEventbus.triggerSync('tjsdoc:event:proxy:runtime:get');
+      const runtimeEventProxy = mainEventbus.triggerSync('tjsdoc:system:event:proxy:runtime:get');
 
       const astData = mainEventbus.triggerSync('tjsdoc:data:ast:get');
       const docData = mainEventbus.triggerSync('tjsdoc:data:docobj:get');
