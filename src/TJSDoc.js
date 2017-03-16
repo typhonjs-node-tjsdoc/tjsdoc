@@ -453,8 +453,10 @@ function s_GENERATE(config)
       // Output any invalid code warnings / errors.
       mainEventbus.trigger('tjsdoc:system:invalid:code:log');
 
-      // Add event binding allowing any plugins to regenerate the documentation during the `onComplete` callback.
+      // Add event binding allowing any plugins to regenerate the documentation during the `onComplete` callback or
+      // ensure that any shutdown handling completes.
       runtimeEventProxy.on('tjsdoc:system:regenerate:all:docs', s_REGENERATE);
+      runtimeEventProxy.on('tjsdoc:system:shutdown', s_SHUTDOWN);
 
       // Invoke a final handler to plugins signalling that initial processing is complete.
       const keepAlive = mainEventbus.triggerSync('plugins:invoke:sync:event', 'onComplete',
@@ -463,14 +465,7 @@ function s_GENERATE(config)
       // There are cases when a plugin may want to continue processing in an ongoing manner such as
       // `tjsdoc-plugin-watcher` that provides live regeneration of document generation. If keepAlive is true then
       // the plugin manager and local event bindings are not destroyed.
-      if (!keepAlive)
-      {
-         // Remove any runtime event bindings.
-         runtimeEventProxy.off();
-
-         // Must destroy all plugins and have them and pluginManager unregister from the eventbus.
-         mainEventbus.trigger('plugins:destroy:manager');
-      }
+      if (!keepAlive) { s_SHUTDOWN(); }
    }
    catch (err)
    {
@@ -485,8 +480,9 @@ function s_REGENERATE()
 {
    const runtimeEventProxy = mainEventbus.triggerSync('tjsdoc:system:event:proxy:runtime:get');
 
-   // Disable the regenerate event binding.
+   // Disable the regenerate and shutdown event binding.
    runtimeEventProxy.off('tjsdoc:system:regenerate:all:docs', s_REGENERATE);
+   runtimeEventProxy.off('tjsdoc:system:shutdown', s_SHUTDOWN);
 
    // Retrieve the target project config.
    const config = mainEventbus.triggerSync('tjsdoc:data:config:get');
@@ -527,4 +523,16 @@ function s_SET_VERSION(packageFilePath, eventbus)
       }
    }
    catch (err) { /* nop */ }
+}
+
+/**
+ * Performs any final shutdown of TJSDoc which removes all event bindings from the main eventbus.
+ */
+function s_SHUTDOWN()
+{
+   // Remove any runtime event bindings.
+   mainEventbus.triggerSync('tjsdoc:system:event:proxy:runtime:get').off();
+
+   // Must destroy all plugins and have them and pluginManager unregister from the eventbus.
+   mainEventbus.trigger('plugins:destroy:manager');
 }
