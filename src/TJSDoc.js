@@ -459,8 +459,8 @@ function s_GENERATE(config)
       runtimeEventProxy.on('tjsdoc:system:shutdown', s_SHUTDOWN);
 
       // Invoke a final handler to plugins signalling that initial processing is complete.
-      const keepAlive = mainEventbus.triggerSync('plugins:invoke:sync:event', 'onComplete',
-       { keepAlive: false }).keepAlive;
+      const keepAlive = mainEventbus.triggerSync('plugins:invoke:sync:event', 'onComplete', void 0,
+       { config, keepAlive: false }).keepAlive;
 
       // There are cases when a plugin may want to continue processing in an ongoing manner such as
       // `tjsdoc-plugin-watcher` that provides live regeneration of document generation. If keepAlive is true then
