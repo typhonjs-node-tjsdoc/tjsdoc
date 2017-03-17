@@ -381,6 +381,7 @@ function s_GENERATE(config)
       const runtimeEventProxy = mainEventbus.triggerSync('tjsdoc:system:event:proxy:runtime:get');
 
       const astData = mainEventbus.triggerSync('tjsdoc:data:ast:get');
+      const astNodeContainer = mainEventbus.triggerSync('tjsdoc:data:ast:node:container:get');
       const docData = mainEventbus.triggerSync('tjsdoc:data:docobj:get');
       const packageObj = mainEventbus.triggerSync('tjsdoc:data:package:object:get');
 
@@ -391,8 +392,8 @@ function s_GENERATE(config)
       mainEventbus.trigger('plugins:invoke:sync:event', 'onStart', void 0, { config, packageObj });
 
       // Generate document data for all source code storing it in `docData` and `astData`.
-      config.sourceFiles.forEach((filePath) =>
-       mainEventbus.trigger('tjsdoc:system:generate:file:doc:data', filePath, docData, astData, 'log'));
+      config.sourceFiles.forEach((filePath) => mainEventbus.trigger('tjsdoc:system:generate:file:doc:data',
+       { filePath, docData, astData, astNodeContainer, handleError: 'log' }));
 
       // Invoke callback for plugins to load any virtual code.
       const virtualCode = mainEventbus.triggerSync('plugins:invoke:sync:event', 'onHandleVirtual', { code: [] }).code;
@@ -403,7 +404,7 @@ function s_GENERATE(config)
       {
          virtualCode.forEach((code) =>
          {
-            const result = mainEventbus.triggerSync('tjsdoc:system:generate:code:doc:data', code);
+            const result = mainEventbus.triggerSync('tjsdoc:system:generate:code:doc:data', { code, astNodeContainer });
 
             // Set `builtinVirtual` to true indicating that these DocObjects are in memory / virtually generated.
             if (result && Array.isArray(result.docData))
@@ -419,8 +420,8 @@ function s_GENERATE(config)
       if (config.test)
       {
          // Generate document data for all test source code storing it in `docData` and `astData`.
-         config.test.sourceFiles.forEach((filePath) =>
-          mainEventbus.trigger('tjsdoc:system:generate:test:doc:data', filePath, docData, astData, 'log'));
+         config.test.sourceFiles.forEach((filePath) => mainEventbus.trigger('tjsdoc:system:generate:test:doc:data',
+          { filePath, docData, astData, astNodeContainer, handleError: 'log' }));
       }
 
       // Allows any plugins to modify document data.
