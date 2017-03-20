@@ -42,12 +42,6 @@ export default class TJSDoc
       const astData = [];
 
       /**
-       * Stores all doc / tag data and eventually is loaded into the DocDB plugin.
-       * @type {DocObject[]}
-       */
-      const docData = [];
-
-      /**
        * Stores the target project package object.
        * @type {NPMPackageObject}
        */
@@ -125,9 +119,6 @@ export default class TJSDoc
 
          // Create an event binding to return all ast data.
          runtimeEventProxy.on('tjsdoc:data:ast:get', () => { return astData; });
-
-         // Create an event binding to return the raw doc data.
-         runtimeEventProxy.on('tjsdoc:data:docobj:get', () => { return docData; });
 
          // Set log level.
          mainEventbus.trigger('log:level:set', config.logLevel);
@@ -382,7 +373,7 @@ function s_GENERATE(config)
 
       const astData = mainEventbus.triggerSync('tjsdoc:data:ast:get');
       const astNodeContainer = mainEventbus.triggerSync('tjsdoc:data:ast:node:container:get');
-      const docData = mainEventbus.triggerSync('tjsdoc:data:docobj:get');
+      const docData = [];
       const packageObj = mainEventbus.triggerSync('tjsdoc:data:package:object:get');
 
       // Potentially empty `config.destination` if `config.emptyDestination` is true via `typhonjs-file-util`.
@@ -493,7 +484,6 @@ function s_REGENERATE()
 
    // Reset AST and doc data.
    mainEventbus.triggerSync('tjsdoc:data:ast:get').length = 0;
-   mainEventbus.triggerSync('tjsdoc:data:docobj:get').length = 0;
 
    // Invoke `onRegenerate` plugin callback to signal that TJSDoc is regenerating the project target. This allows
    // any internal / external plugins to reset data as necessary.
