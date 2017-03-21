@@ -36,12 +36,6 @@ export default class TJSDoc
    static generate(config)
    {
       /**
-       * Stores all parsed AST data.
-       * @type {ASTData[]}
-       */
-      const astData = [];
-
-      /**
        * Stores the target project package object.
        * @type {NPMPackageObject}
        */
@@ -117,9 +111,6 @@ export default class TJSDoc
          // Validate the config file checking for any improper or missing values after potential user modification.
          mainEventbus.triggerSync('tjsdoc:system:config:resolver:validate:post', config);
 
-         // Create an event binding to return all ast data.
-         runtimeEventProxy.on('tjsdoc:data:ast:get', () => { return astData; });
-
          // Set log level.
          mainEventbus.trigger('log:level:set', config.logLevel);
 
@@ -135,19 +126,6 @@ export default class TJSDoc
          // Create RegExp instances for any includes / excludes definitions.
          config._includes = config.includes.map((v) => new RegExp(v));
          config._excludes = config.excludes.map((v) => new RegExp(v));
-
-         // Create an event binding to filter out source code in provided `docData` based on `config.includeSource`.
-         runtimeEventProxy.on('tjsdoc:system:docobj:filter:include:source', (docData) =>
-         {
-            // Optionally remove source code from all file / testFile document data.
-            if (!config.includeSource)
-            {
-               for (const value of docData)
-               {
-                  if (['file', 'testFile'].includes(value.kind) && 'content' in value) { value.content = ''; }
-               }
-            }
-         });
 
          // Make sure that either `config.source` or `config.sourceFiles` is defined.
          if (!Array.isArray(config.sourceFiles) && typeof config.source === 'undefined')
@@ -248,6 +226,12 @@ export default class TJSDoc
 
          // Create an event binding to return the config.
          runtimeEventProxy.on('tjsdoc:data:config:get', () => config);
+
+         // Invoke event binding to create DocDB.
+         const docDB = mainEventbus.triggerSync('tjsdoc:system:docdb:create');
+
+         // Add the docDB as a plugin making it accessible via event bindings to all plugins.
+         mainEventbus.trigger('plugins:add', { name: 'tjsdoc-doc-database', instance: docDB });
 
          // Invoke the main runtime documentation generation.
          s_GENERATE(config);
@@ -369,12 +353,9 @@ function s_GENERATE(config)
 {
    try
    {
-      const runtimeEventProxy = mainEventbus.triggerSync('tjsdoc:system:event:proxy:runtime:get');
-
-      const astData = mainEventbus.triggerSync('tjsdoc:data:ast:get');
-      const astNodeContainer = mainEventbus.triggerSync('tjsdoc:data:ast:node:container:get');
-      const docData = [];
+      const docDB = mainEventbus.triggerSync('tjsdoc:data:docdb:get');
       const packageObj = mainEventbus.triggerSync('tjsdoc:data:package:object:get');
+      const runtimeEventProxy = mainEventbus.triggerSync('tjsdoc:system:event:proxy:runtime:get');
 
       // Potentially empty `config.destination` if `config.emptyDestination` is true via `typhonjs-file-util`.
       if (config.emptyDestination) { mainEventbus.trigger('typhonjs:util:file:path:relative:empty'); }
@@ -384,7 +365,7 @@ function s_GENERATE(config)
 
       // Generate document data for all source code storing it in `docData` and `astData`.
       config.sourceFiles.forEach((filePath) => mainEventbus.trigger('tjsdoc:system:generate:file:doc:data',
-       { filePath, docData, astData, astNodeContainer, handleError: 'log' }));
+       { filePath, docDB, handleError: 'log' }));
 
       // Invoke callback for plugins to load any virtual code.
       const virtualCode = mainEventbus.triggerSync('plugins:invoke:sync:event', 'onHandleVirtual', { code: [] }).code;
@@ -395,15 +376,16 @@ function s_GENERATE(config)
       {
          virtualCode.forEach((code) =>
          {
-            const result = mainEventbus.triggerSync('tjsdoc:system:generate:code:doc:data', { code, astNodeContainer });
+            // Create a new DocDB when parsing the virtual code.
+            const virtualDocDB = mainEventbus.triggerSync('tjsdoc:system:generate:code:doc:data', { code });
 
-            // Set `builtinVirtual` to true indicating that these DocObjects are in memory / virtually generated.
-            if (result && Array.isArray(result.docData))
+            // Set `builtinVirtual` to true indicating that these DocObjects are in memory / virtually generated then
+            // add the virtual doc to the main DocDB.
+            virtualDocDB.query().each((doc) =>
             {
-               result.docData.forEach((v) => v.builtinVirtual = true);
-
-               docData.push(...result.docData);
-            }
+               doc.builtinVirtual = true;
+               docDB.insert(doc);
+            });
          });
       }
 
@@ -412,20 +394,11 @@ function s_GENERATE(config)
       {
          // Generate document data for all test source code storing it in `docData` and `astData`.
          config.test.sourceFiles.forEach((filePath) => mainEventbus.trigger('tjsdoc:system:generate:test:doc:data',
-          { filePath, docData, astData, astNodeContainer, handleError: 'log' }));
+          { filePath, docDB, handleError: 'log' }));
       }
 
-      // Allows any plugins to modify document data.
-      mainEventbus.trigger('plugins:invoke:sync:event', 'onHandleDocData', void 0, { docData });
-
       // Remove source code from file and test file doc data if `config.includeSource` is false.
-      mainEventbus.trigger('tjsdoc:system:docobj:filter:include:source', docData);
-
-      // Invoke common runtime event binding to create DocDB.
-      const docDB = mainEventbus.triggerSync('tjsdoc:data:docdb:create', docData);
-
-      // Add the docDB as a plugin making it accessible via event bindings to all plugins.
-      mainEventbus.trigger('plugins:add', { name: 'tjsdoc-doc-database', instance: docDB });
+      mainEventbus.trigger('tjsdoc:system:docdb:filter:include:source', docDB);
 
       // Allows any plugins to modify document database directly.
       mainEventbus.trigger('plugins:invoke:sync:event', 'onHandleDocDB', void 0, { docDB });
@@ -479,11 +452,8 @@ function s_REGENERATE()
    // Retrieve the target project config.
    const config = mainEventbus.triggerSync('tjsdoc:data:config:get');
 
-   // Remove any existing DocDB.
-   mainEventbus.trigger('plugins:remove', 'tjsdoc-doc-database');
-
-   // Reset AST and doc data.
-   mainEventbus.triggerSync('tjsdoc:data:ast:get').length = 0;
+   // Reset existing DocDB.
+   mainEventbus.trigger('tjsdoc:data:docdb:reset');
 
    // Invoke `onRegenerate` plugin callback to signal that TJSDoc is regenerating the project target. This allows
    // any internal / external plugins to reset data as necessary.
