@@ -233,6 +233,9 @@ export default class TJSDoc
          // Add the docDB as a plugin making it accessible via event bindings to all plugins.
          mainEventbus.trigger('plugins:add', { name: 'tjsdoc-doc-database', instance: docDB });
 
+         // Allow external plugins to modify the config file.
+         pluginManager.invokeSyncEvent('onPreGenerate', void 0, { config, packageObj });
+
          // Invoke the main runtime documentation generation.
          s_GENERATE(config);
       }
@@ -397,9 +400,6 @@ function s_GENERATE(config)
           { filePath, docDB, handleError: 'log' }));
       }
 
-      // Remove source code from file and test file doc data if `config.includeSource` is false.
-      mainEventbus.trigger('tjsdoc:system:docdb:filter:include:source', docDB);
-
       // Allows any plugins to modify document database directly.
       mainEventbus.trigger('plugins:invoke:sync:event', 'onHandleDocDB', void 0, { docDB });
 
@@ -413,7 +413,7 @@ function s_GENERATE(config)
       mainEventbus.trigger('tjsdoc:system:publisher:publish');
 
       // If documentation linting is enabled then output any lint warnings.
-      if (config.docLint) { mainEventbus.trigger('tjsdoc:system:lint:docdb:log'); }
+      if (config.docLint) { mainEventbus.trigger('tjsdoc:system:lint:doc:log'); }
 
       // Output any invalid code warnings / errors.
       mainEventbus.trigger('tjsdoc:system:invalid:code:log');
