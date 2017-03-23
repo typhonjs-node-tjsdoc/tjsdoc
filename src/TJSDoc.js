@@ -491,6 +491,9 @@ function s_SET_VERSION(packageFilePath, eventbus)
  */
 function s_SHUTDOWN()
 {
+   // Allow any plugins a final chance to shutdown.
+   mainEventbus.trigger('plugins:invoke:sync:event', 'onShutdown');
+
    // Remove any runtime event bindings.
    mainEventbus.triggerSync('tjsdoc:system:event:proxy:runtime:get').off();
 
