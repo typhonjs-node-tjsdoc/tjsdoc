@@ -233,7 +233,7 @@ export default class TJSDoc
          // Add the docDB as a plugin making it accessible via event bindings to all plugins.
          mainEventbus.trigger('plugins:add', { name: 'tjsdoc-doc-database', instance: docDB });
 
-         // Allow external plugins to modify the config file.
+         // Allow external plugins to react to final config and packageObj settings prior to generation.
          pluginManager.invokeSyncEvent('onPreGenerate', void 0, { config, packageObj });
 
          // Invoke the main runtime documentation generation.
