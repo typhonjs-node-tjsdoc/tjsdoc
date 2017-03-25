@@ -234,12 +234,12 @@ export default class TJSDocCLI
 }
 
 // If this file is directory executed, work as CLI. However in WebStorm when profiling for heap dumps the target source
-// file is required be a wrapper so if `WEBSTORM_DEBUG` environment variable exists also start the CLI.
+// file is required be a wrapper so if `TJSDOC_FORCE_CLI` environment variable exists also start the CLI.
 if (fs.realpathSync(process.argv[1]) === __filename)
 {
    new TJSDocCLI(process.argv).exec();
 }
-else if (process.env.WEBSTORM_DEBUG) //
+else if (process.env.TJSDOC_FORCE_CLI)
 {
    new TJSDocCLI(process.argv).exec();
 }
