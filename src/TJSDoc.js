@@ -420,8 +420,8 @@ function s_GENERATE(config)
 
       // Add event binding allowing any plugins to regenerate the documentation during the `onComplete` callback or
       // ensure that any shutdown handling completes.
-      runtimeEventProxy.on('tjsdoc:system:regenerate:all:docs', s_REGENERATE);
-      runtimeEventProxy.on('tjsdoc:system:shutdown', s_SHUTDOWN);
+      runtimeEventProxy.on('tjsdoc:system:regenerate:all:docs', () => setImmediate(s_REGENERATE));
+      runtimeEventProxy.on('tjsdoc:system:shutdown', () => setImmediate(s_SHUTDOWN));
 
       // Invoke a final handler to plugins signalling that initial processing is complete.
       const keepAlive = mainEventbus.triggerSync('plugins:invoke:sync:event', 'onComplete', void 0,
@@ -446,8 +446,8 @@ function s_REGENERATE()
    const runtimeEventProxy = mainEventbus.triggerSync('tjsdoc:system:event:proxy:runtime:get');
 
    // Disable the regenerate and shutdown event binding.
-   runtimeEventProxy.off('tjsdoc:system:regenerate:all:docs', s_REGENERATE);
-   runtimeEventProxy.off('tjsdoc:system:shutdown', s_SHUTDOWN);
+   runtimeEventProxy.off('tjsdoc:system:regenerate:all:docs');
+   runtimeEventProxy.off('tjsdoc:system:shutdown');
 
    // Retrieve the target project config.
    const config = mainEventbus.triggerSync('tjsdoc:data:config:get');
