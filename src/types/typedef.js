@@ -15,7 +15,7 @@
  */
 
 /**
- * Parsed doc comments.
+ * Parsed doc comments. Generated from a StaticDoc generator.
  *
  * @typedef {Object} DocObject
  */
@@ -45,6 +45,12 @@
  * @property {*}        [defaultRaw]
  * @property {string}   [name]
  * @property {string}   [description]
+ */
+
+/**
+ * A static class which generates DocObject data.
+ *
+ * @typedef {Object} StaticDoc
  */
 
 /**
