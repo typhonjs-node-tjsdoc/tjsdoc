@@ -412,12 +412,6 @@ function s_GENERATE(config)
       // Invoke publisher which should create the final documentation output.
       mainEventbus.trigger('tjsdoc:system:publisher:publish');
 
-      // If documentation linting is enabled then output any lint warnings.
-      if (config.docLint) { mainEventbus.trigger('tjsdoc:system:lint:doc:log'); }
-
-      // Output any invalid code warnings / errors.
-      mainEventbus.trigger('tjsdoc:system:invalid:code:log');
-
       // Add event binding allowing any plugins to regenerate the documentation during the `onComplete` callback or
       // ensure that any shutdown handling completes.
       runtimeEventProxy.on('tjsdoc:system:regenerate:all:docs', () => setImmediate(s_REGENERATE));
