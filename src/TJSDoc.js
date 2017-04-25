@@ -366,7 +366,7 @@ function s_GENERATE(config)
       // Invoke `onStart` plugin callback to signal the start of TJSDoc processing.
       mainEventbus.trigger('plugins:invoke:sync:event', 'onStart', void 0, { config, packageObj });
 
-      // Generate document data for all source code storing it in `docData` and `astData`.
+      // Generate document data for all source code storing it in `docDB`.
       config.sourceFiles.forEach((filePath) => mainEventbus.trigger('tjsdoc:system:generate:file:doc:data',
        { filePath, docDB, handleError: 'log' }));
 
