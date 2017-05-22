@@ -379,16 +379,12 @@ function s_GENERATE(config)
       {
          virtualCode.forEach((code) =>
          {
-            // Create a new DocDB when parsing the virtual code.
-            const virtualDocDB = mainEventbus.triggerSync('tjsdoc:system:generate:code:doc:data', { code });
-
-            // Set `builtinVirtual` to true indicating that these DocObjects are in memory / virtually generated then
-            // add the virtual doc to the main DocDB.
-            virtualDocDB.query().each((doc) =>
+            // Provide a doc filter to set `builtinVirtual` to true indicating that all DocObjects added are in memory /
+            // virtually generated.
+            mainEventbus.triggerSync('tjsdoc:system:generate:code:doc:data', { docDB, code, docFilter: (doc) =>
             {
                doc.builtinVirtual = true;
-               docDB.insert(doc);
-            });
+            } });
          });
       }
 
