@@ -367,7 +367,7 @@ function s_GENERATE(config)
       mainEventbus.trigger('plugins:invoke:sync:event', 'onStart', void 0, { config, docDB, packageObj });
 
       // Generate document data for all source code storing it in `docDB`.
-      config.sourceFiles.forEach((filePath) => mainEventbus.trigger('tjsdoc:system:generate:file:doc:data',
+      config.sourceFiles.forEach((filePath) => mainEventbus.trigger('tjsdoc:system:generate:source:doc:data',
        { filePath, docDB, handleError: 'log' }));
 
       // Invoke callback for plugins to load any virtual code.
