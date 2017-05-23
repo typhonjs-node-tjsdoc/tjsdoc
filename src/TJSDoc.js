@@ -417,6 +417,8 @@ function s_GENERATE(config)
       const keepAlive = mainEventbus.triggerSync('plugins:invoke:sync:event', 'onComplete', void 0,
        { config, docDB, keepAlive: false, packageObj }).keepAlive;
 
+      if (config.docCoverage) { docDB.logSourceCoverage({ includeFiles: config.docCoverageFiles }); }
+
       // There are cases when a plugin may want to continue processing in an ongoing manner such as
       // `tjsdoc-plugin-watcher` that provides live regeneration of document generation. If keepAlive is true then
       // the plugin manager and local event bindings are not destroyed.
