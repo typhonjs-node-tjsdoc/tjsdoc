@@ -408,6 +408,9 @@ function s_GENERATE(config)
       // Invoke publisher which creates the final documentation output.
       mainEventbus.trigger('tjsdoc:system:publisher:publish');
 
+      // If documentation coverage is enabled log the current source coverage.
+      if (config.docCoverage) { docDB.logSourceCoverage({ includeFiles: config.docCoverageFiles }); }
+
       // Add event binding allowing any plugins to regenerate the documentation during the `onComplete` callback or
       // ensure that any shutdown handling completes.
       runtimeEventProxy.on('tjsdoc:system:regenerate:all:docs', () => setImmediate(s_REGENERATE));
@@ -416,8 +419,6 @@ function s_GENERATE(config)
       // Invoke a final handler to plugins signalling that initial processing is complete.
       const keepAlive = mainEventbus.triggerSync('plugins:invoke:sync:event', 'onComplete', void 0,
        { config, docDB, keepAlive: false, packageObj }).keepAlive;
-
-      if (config.docCoverage) { docDB.logSourceCoverage({ includeFiles: config.docCoverageFiles }); }
 
       // There are cases when a plugin may want to continue processing in an ongoing manner such as
       // `tjsdoc-plugin-watcher` that provides live regeneration of document generation. If keepAlive is true then
