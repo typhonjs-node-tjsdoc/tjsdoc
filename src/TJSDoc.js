@@ -42,6 +42,12 @@ export default class TJSDoc
       let packageObj = {};
 
       /**
+       * Stores the formatted package info.
+       * @type {{}}
+       */
+      let packageInfo = {};
+
+      /**
        * The runtime plugin manager for internal and user plugins.
        * @type {PluginManager}
        */
@@ -166,20 +172,19 @@ export default class TJSDoc
             try
             {
                packageObj = require(path.resolve(config.package));
+               packageInfo = mainEventbus.triggerSync('typhonjs:util:package:object:format', packageObj);
             }
             catch (err) { /* nop */ }
          }
 
-         // Deep freeze the target project package object.
+         // Deep freeze the target project package objects.
          mainEventbus.trigger('typhonjs:object:util:deep:freeze', packageObj);
+         mainEventbus.trigger('typhonjs:object:util:deep:freeze', packageInfo);
 
          // Create event bindings for retrieving `package.json` related resources.
          runtimeEventProxy.on('tjsdoc:data:package:object:get', () => { return packageObj; });
-
-         // Provide an override to `typhonjs:util:package:object:format` to set a default package.
-         runtimeEventProxy.on('tjsdoc:data:package:object:format', (packageObject = packageObj) =>
-          runtimeEventProxy.triggerSync('typhonjs:util:package:object:format', packageObject));
-
+         runtimeEventProxy.on('tjsdoc:data:package:info:get', () => { return packageInfo; });
+         
          // If `config.sourceFiles` is not defined then hydrate `config.source` as source globs.
          if (!Array.isArray(config.sourceFiles))
          {
@@ -234,7 +239,7 @@ export default class TJSDoc
          mainEventbus.trigger('plugins:add', { name: 'tjsdoc-doc-database', instance: docDB });
 
          // Allow external plugins to react to final config and packageObj settings prior to generation.
-         pluginManager.invokeSyncEvent('onPreGenerate', void 0, { config, docDB, packageObj });
+         pluginManager.invokeSyncEvent('onPreGenerate', void 0, { config, docDB, packageInfo, packageObj });
 
          // Invoke the main runtime documentation generation.
          s_GENERATE(config);
@@ -357,6 +362,7 @@ function s_GENERATE(config)
    try
    {
       const docDB = mainEventbus.triggerSync('tjsdoc:data:docdb:get');
+      const packageInfo = mainEventbus.triggerSync('tjsdoc:data:package:info:get');
       const packageObj = mainEventbus.triggerSync('tjsdoc:data:package:object:get');
       const runtimeEventProxy = mainEventbus.triggerSync('tjsdoc:system:event:proxy:runtime:get');
 
@@ -364,7 +370,7 @@ function s_GENERATE(config)
       if (config.emptyDestination) { mainEventbus.trigger('typhonjs:util:file:path:relative:empty'); }
 
       // Invoke `onStart` plugin callback to signal the start of TJSDoc processing.
-      mainEventbus.trigger('plugins:invoke:sync:event', 'onStart', void 0, { config, docDB, packageObj });
+      mainEventbus.trigger('plugins:invoke:sync:event', 'onStart', void 0, { config, docDB, packageInfo, packageObj });
 
       // Generate document data for all source code storing it in `docDB`.
       config.sourceFiles.forEach((filePath) => mainEventbus.trigger('tjsdoc:system:generate:source:doc:data',
@@ -418,7 +424,7 @@ function s_GENERATE(config)
 
       // Invoke a final handler to plugins signalling that initial processing is complete.
       const keepAlive = mainEventbus.triggerSync('plugins:invoke:sync:event', 'onComplete', void 0,
-       { config, docDB, keepAlive: false, packageObj }).keepAlive;
+       { config, docDB, keepAlive: false, packageInfo, packageObj }).keepAlive;
 
       // There are cases when a plugin may want to continue processing in an ongoing manner such as
       // `tjsdoc-plugin-watcher` that provides live regeneration of document generation. If keepAlive is true then
@@ -445,6 +451,7 @@ function s_REGENERATE()
    // Retrieve the target project config.
    const config = mainEventbus.triggerSync('tjsdoc:data:config:get');
    const docDB = mainEventbus.triggerSync('tjsdoc:data:docdb:get');
+   const packageInfo = mainEventbus.triggerSync('tjsdoc:data:package:info:get');
    const packageObj = mainEventbus.triggerSync('tjsdoc:data:package:object:get');
 
    // Reset existing DocDB.
@@ -452,7 +459,8 @@ function s_REGENERATE()
 
    // Invoke `onRegenerate` plugin callback to signal that TJSDoc is regenerating the project target. This allows
    // any internal / external plugins to reset data as necessary.
-   mainEventbus.trigger('plugins:invoke:sync:event', 'onRegenerate', void 0, { config, docDB, packageObj });
+   mainEventbus.trigger('plugins:invoke:sync:event', 'onRegenerate', void 0,
+    { config, docDB, packageInfo, packageObj });
 
    // Invoke the main runtime documentation generation.
    s_GENERATE(config);
