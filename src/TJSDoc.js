@@ -408,11 +408,11 @@ function s_GENERATE(config)
           { filePath, docDB, handleError: 'log' }));
       }
 
-      // Allows any plugins to modify document database directly.
-      mainEventbus.trigger('plugins:invoke:sync:event', 'onHandleDocDB', void 0, { docDB });
-
       // Invoke core doc resolver which resolves various properties of the DocDB.
       mainEventbus.trigger('tjsdoc:system:resolver:docdb:resolve');
+
+      // Allows any plugins to modify document database directly.
+      mainEventbus.trigger('plugins:invoke:sync:event', 'onHandleDocDB', void 0, { docDB });
 
       mainEventbus.trigger('log:info:raw', `tjsdoc - publishing with: ${
        typeof config.publisher === 'object' ? config.publisher.name : config.publisher}`);
