@@ -8,6 +8,9 @@ if (!global._babelPolyfill) { require('babel-polyfill'); }
 // Set `TJSDOC_ENV` environment variable to standard (published modules) unless `BABEL_ENV` is `tjsdoc-dev`.
 process.env.TJSDOC_ENV = process.env.BABEL_ENV === 'tjsdoc-dev' ? 'development' : 'standard';
 
+// A prepend string for logging to indicate TJSDoc module.
+const s_LOG_PREPEND = 'tjsdoc - ';
+
 /**
  * API Documentation Generator.
  *
@@ -375,7 +378,10 @@ function s_GENERATE(mainConfig)
       const runtimeEventProxy = mainEventbus.triggerSync('tjsdoc:system:event:proxy:runtime:get');
 
       // Potentially empty `mainConfig.destination` if `mainConfig.emptyDestination` is true via `typhonjs-file-util`.
-      if (mainConfig.emptyDestination) { mainEventbus.trigger('typhonjs:util:file:path:relative:empty'); }
+      if (mainConfig.emptyDestination)
+      {
+         mainEventbus.trigger('typhonjs:util:file:path:relative:empty', { logPrepend: s_LOG_PREPEND });
+      }
 
       // Invoke `onStart` plugin callback to signal the start of TJSDoc processing.
       mainEventbus.trigger('plugins:invoke:sync:event', 'onStart', void 0,
