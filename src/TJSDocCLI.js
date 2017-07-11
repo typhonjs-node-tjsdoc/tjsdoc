@@ -92,7 +92,7 @@ export default class TJSDocCLI
     *
     * @param {Object}   [runtime=TJSDoc] - The TJSDoc runtime to invoke.
     */
-   exec(runtime = TJSDoc)
+   async exec(runtime = TJSDoc)
    {
       let config, configPath;
 
@@ -123,7 +123,7 @@ export default class TJSDocCLI
       {
          if (config)
          {
-            runtime.generate(config);
+            await runtime.generate(config);
          }
          else
          {

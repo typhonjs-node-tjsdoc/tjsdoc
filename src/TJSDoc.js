@@ -36,7 +36,7 @@ export default class TJSDoc
     *
     * @param {TJSDocConfig} mainConfig - config for pre-generation validation and loading.
     */
-   static generate(mainConfig)
+   static async generate(mainConfig)
    {
       /**
        * Stores the target project package object.
@@ -252,7 +252,7 @@ export default class TJSDoc
           { mainConfig, docDB, packageInfo, packageObj, pubConfig });
 
          // Invoke the main runtime documentation generation.
-         s_GENERATE(mainConfig);
+         await s_GENERATE();
       }
       catch (err)
       {
@@ -367,8 +367,10 @@ function s_ERR_HANDLER(err, mainConfig)
  *
  * @param {TJSDocConfig} mainConfig - config for generation.
  */
-function s_GENERATE(mainConfig)
+async function s_GENERATE()
 {
+   const mainConfig = mainEventbus.triggerSync('tjsdoc:data:config:main:get');
+
    try
    {
       const docDB = mainEventbus.triggerSync('tjsdoc:data:docdb:get');
@@ -426,8 +428,7 @@ function s_GENERATE(mainConfig)
       mainEventbus.trigger('log:info:raw', `tjsdoc - publishing with: ${
        typeof mainConfig.publisher === 'object' ? mainConfig.publisher.name : mainConfig.publisher}`);
 
-      // Invoke publisher which creates the final documentation output.
-      mainEventbus.trigger('tjsdoc:system:publisher:publish');
+      await mainEventbus.triggerAsync('tjsdoc:system:publisher:publish');
 
       // If documentation coverage is enabled log the current source coverage.
       if (mainConfig.docCoverage) { docDB.logSourceCoverage({ includeFiles: mainConfig.docCoverageFiles }); }
@@ -455,7 +456,7 @@ function s_GENERATE(mainConfig)
 /**
  * Cleans up any resources before regenerating documentation.
  */
-function s_REGENERATE()
+async function s_REGENERATE()
 {
    const runtimeEventProxy = mainEventbus.triggerSync('tjsdoc:system:event:proxy:runtime:get');
 
@@ -479,7 +480,7 @@ function s_REGENERATE()
     { mainConfig, docDB, packageInfo, packageObj, pubConfig });
 
    // Invoke the main runtime documentation generation.
-   s_GENERATE(mainConfig);
+   await s_GENERATE();
 }
 
 /**
