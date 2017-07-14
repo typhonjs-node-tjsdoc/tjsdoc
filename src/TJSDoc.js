@@ -67,7 +67,7 @@ export default class TJSDoc
 
       // Load the logger plugin and enable auto plugin filters which adds inclusive filters for all plugins added.
       // In addition add inclusive log trace filter to limit info and trace to just tjsdoc source.
-      pluginManager.add(
+      await pluginManager.addAsync(
       {
          name: 'typhonjs-color-logger',
          options: {
@@ -100,13 +100,13 @@ export default class TJSDoc
 
          // Allow any plugins which may alter `mainConfig.publisher` a chance to do so before loading. Add
          // `mainConfig.publisherOptions` to the mainConfig to set particular options passed to the publisher.
-         pluginManager.add(typeof mainConfig.publisher === 'object' ?
+         await pluginManager.addAsync(typeof mainConfig.publisher === 'object' ?
           Object.assign({ options: mainConfig.publisherOptions }, mainConfig.publisher) :
            { name: mainConfig.publisher, options: mainConfig.publisherOptions });
 
          // Allow any plugins which may alter `mainConfig.runtime` a chance to do so before loading. Add
          // `mainConfig.runtimeOptions` to plugin mainConfig.
-         pluginManager.add(typeof mainConfig.runtime === 'object' ?
+         await pluginManager.addAsync(typeof mainConfig.runtime === 'object' ?
           Object.assign({ options: mainConfig.runtimeOptions }, mainConfig.runtime) :
            { name: mainConfig.runtime, options: mainConfig.runtimeOptions });
 
@@ -121,10 +121,10 @@ export default class TJSDoc
          const pubConfig = mainConfig.publisherOptions || {};
 
          // Add all user specified plugins.
-         pluginManager.addAll(mainConfig.plugins);
+         await pluginManager.addAllAsync(mainConfig.plugins);
 
          // Allow external plugins to modify the mainConfig file.
-         pluginManager.invokeSyncEvent('onHandleConfig', void 0, { mainConfig, pubConfig });
+         await pluginManager.invokeAsyncEvent('onHandleConfigAsync', void 0, { mainConfig, pubConfig });
 
          // Validate the mainConfig file checking for any improper or missing values after potential user modification.
          mainEventbus.triggerSync('tjsdoc:system:config:resolver:validate:post', mainConfig);
@@ -160,15 +160,15 @@ export default class TJSDoc
          // be enabled when building documentation for TJSDoc itself.
          if (typeof mainConfig.builtinPluginVirtual === 'boolean' && mainConfig.builtinPluginVirtual)
          {
-            pluginManager.addAll(
+            await pluginManager.addAllAsync(
             [
                { name: 'backbone-esnext-events/.tjsdoc/virtual/remote' },
                { name: 'typhonjs-plugin-manager/.tjsdoc/virtual/remote' }
             ]);
 
-            runtimeEventProxy.on('typhonjs:plugin:manager:plugin:added', (pluginData) =>
+            runtimeEventProxy.on('typhonjs:plugin:manager:plugin:added', async (pluginData) =>
             {
-               s_BUILTIN_PLUGIN_VIRTUAL(pluginData, pluginManager);
+               await s_BUILTIN_PLUGIN_VIRTUAL(pluginData, pluginManager);
             });
          }
 
@@ -245,10 +245,10 @@ export default class TJSDoc
          const docDB = mainEventbus.triggerSync('tjsdoc:system:docdb:create');
 
          // Add the docDB as a plugin making it accessible via event bindings to all plugins.
-         mainEventbus.trigger('plugins:add', { name: 'tjsdoc-doc-database', instance: docDB });
+         await mainEventbus.triggerAsync('plugins:add:async', { name: 'tjsdoc-doc-database', instance: docDB });
 
          // Allow external plugins to react to final config and packageObj settings prior to generation.
-         pluginManager.invokeSyncEvent('onPreGenerate', void 0,
+         await pluginManager.invokeAsyncEvent('onRuntimePreGenerateAsync', void 0,
           { mainConfig, docDB, packageInfo, packageObj, pubConfig });
 
          // Invoke the main runtime documentation generation.
@@ -274,7 +274,7 @@ export default class TJSDoc
  *
  * @param {PluginManager}  pluginManager - The plugin manager.
  */
-function s_BUILTIN_PLUGIN_VIRTUAL(pluginData, pluginManager)
+async function s_BUILTIN_PLUGIN_VIRTUAL(pluginData, pluginManager)
 {
    if (pluginData.type === 'require-module' && !pluginData.target.endsWith('.tjsdoc/virtual/remote'))
    {
@@ -285,7 +285,7 @@ function s_BUILTIN_PLUGIN_VIRTUAL(pluginData, pluginManager)
 
          if (typeof virtualRemotePlugin.onHandleVirtual === 'function')
          {
-            pluginManager.add({ name: virtualRemotePluginFile });
+            await pluginManager.addAsync({ name: virtualRemotePluginFile });
          }
       }
       catch (err) { /* nop */ }
@@ -386,7 +386,7 @@ async function s_GENERATE()
       }
 
       // Invoke `onStart` plugin callback to signal the start of TJSDoc processing.
-      mainEventbus.trigger('plugins:invoke:sync:event', 'onStart', void 0,
+      await mainEventbus.triggerAsync('plugins:invoke:async:event', 'onRuntimeStartAsync', void 0,
        { mainConfig, docDB, packageInfo, packageObj, pubConfig });
 
       // Generate document data for all source code storing it in `docDB`.
@@ -394,7 +394,8 @@ async function s_GENERATE()
        { filePath, docDB, handleError: 'log' }));
 
       // Invoke callback for plugins to load any virtual code.
-      const virtualCode = mainEventbus.triggerSync('plugins:invoke:sync:event', 'onHandleVirtual', { code: [] }).code;
+      const virtualCode = (await mainEventbus.triggerAsync('plugins:invoke:async:event', 'onHandleVirtualAsync',
+       { code: [] })).code;
 
       // If there is any virtual code to load then process it. This is useful for dynamically loading external and
       // typedef code references.
@@ -423,7 +424,7 @@ async function s_GENERATE()
       mainEventbus.trigger('tjsdoc:system:resolver:docdb:resolve');
 
       // Allows any plugins to modify document database directly.
-      mainEventbus.trigger('plugins:invoke:sync:event', 'onHandleDocDB', void 0, { docDB });
+      await mainEventbus.triggerAsync('plugins:invoke:async:event', 'onHandleDocDBAsync', void 0, { docDB });
 
       mainEventbus.trigger('log:info:raw', `tjsdoc - publishing with: ${
        typeof mainConfig.publisher === 'object' ? mainConfig.publisher.name : mainConfig.publisher}`);
@@ -439,13 +440,13 @@ async function s_GENERATE()
       runtimeEventProxy.on('tjsdoc:system:shutdown', () => setImmediate(s_SHUTDOWN));
 
       // Invoke a final handler to plugins signalling that initial processing is complete.
-      const keepAlive = mainEventbus.triggerSync('plugins:invoke:sync:event', 'onComplete', void 0,
-       { mainConfig, docDB, keepAlive: false, packageInfo, packageObj, pubConfig }).keepAlive;
+      const keepAlive = (await mainEventbus.triggerAsync('plugins:invoke:async:event', 'onRuntimeCompleteAsync', void 0,
+       { mainConfig, docDB, keepAlive: false, packageInfo, packageObj, pubConfig })).keepAlive;
 
       // There are cases when a plugin may want to continue processing in an ongoing manner such as
       // `tjsdoc-plugin-watcher` that provides live regeneration of document generation. If keepAlive is true then
       // the plugin manager and local event bindings are not destroyed.
-      if (!keepAlive) { s_SHUTDOWN(); }
+      if (!keepAlive) { await s_SHUTDOWN(); }
    }
    catch (err)
    {
@@ -476,7 +477,7 @@ async function s_REGENERATE()
 
    // Invoke `onRegenerate` plugin callback to signal that TJSDoc is regenerating the project target. This allows
    // any internal / external plugins to reset data as necessary.
-   mainEventbus.trigger('plugins:invoke:sync:event', 'onRegenerate', void 0,
+   await mainEventbus.triggerAsync('plugins:invoke:async:event', 'onRuntimeRegenerateAsync', void 0,
     { mainConfig, docDB, packageInfo, packageObj, pubConfig });
 
    // Invoke the main runtime documentation generation.
@@ -509,14 +510,14 @@ function s_SET_VERSION(packageFilePath, eventbus)
 /**
  * Performs any final shutdown of TJSDoc which removes all event bindings from the main eventbus.
  */
-function s_SHUTDOWN()
+async function s_SHUTDOWN()
 {
    // Allow any plugins a final chance to shutdown.
-   mainEventbus.trigger('plugins:invoke:sync:event', 'onShutdown');
+   await mainEventbus.triggerAsync('plugins:invoke:async:event', 'onRuntimeShutdownAsync');
 
    // Remove any runtime event bindings.
    mainEventbus.triggerSync('tjsdoc:system:event:proxy:runtime:get').off();
 
    // Must destroy all plugins and have them and pluginManager unregister from the eventbus.
-   mainEventbus.trigger('plugins:destroy:manager');
+   await mainEventbus.triggerAsync('plugins:destroy:manager:async');
 }
