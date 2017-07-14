@@ -245,7 +245,7 @@ export default class TJSDoc
          const docDB = mainEventbus.triggerSync('tjsdoc:system:docdb:create');
 
          // Add the docDB as a plugin making it accessible via event bindings to all plugins.
-         await mainEventbus.triggerAsync('plugins:add:async', { name: 'tjsdoc-doc-database', instance: docDB });
+         await mainEventbus.triggerAsync('plugins:async:add', { name: 'tjsdoc-doc-database', instance: docDB });
 
          // Allow external plugins to react to final config and packageObj settings prior to generation.
          await pluginManager.invokeAsyncEvent('onRuntimePreGenerateAsync', void 0,
@@ -386,7 +386,7 @@ async function s_GENERATE()
       }
 
       // Invoke `onStart` plugin callback to signal the start of TJSDoc processing.
-      await mainEventbus.triggerAsync('plugins:invoke:async:event', 'onRuntimeStartAsync', void 0,
+      await mainEventbus.triggerAsync('plugins:async:invoke:event', 'onRuntimeStartAsync', void 0,
        { mainConfig, docDB, packageInfo, packageObj, pubConfig });
 
       // Generate document data for all source code storing it in `docDB`.
@@ -394,7 +394,7 @@ async function s_GENERATE()
        { filePath, docDB, handleError: 'log' }));
 
       // Invoke callback for plugins to load any virtual code.
-      const virtualCode = (await mainEventbus.triggerAsync('plugins:invoke:async:event', 'onHandleVirtualAsync',
+      const virtualCode = (await mainEventbus.triggerAsync('plugins:async:invoke:event', 'onHandleVirtualAsync',
        { code: [] })).code;
 
       // If there is any virtual code to load then process it. This is useful for dynamically loading external and
@@ -424,7 +424,7 @@ async function s_GENERATE()
       mainEventbus.trigger('tjsdoc:system:resolver:docdb:resolve');
 
       // Allows any plugins to modify document database directly.
-      await mainEventbus.triggerAsync('plugins:invoke:async:event', 'onHandleDocDBAsync', void 0, { docDB });
+      await mainEventbus.triggerAsync('plugins:async:invoke:event', 'onHandleDocDBAsync', void 0, { docDB });
 
       mainEventbus.trigger('log:info:raw', `tjsdoc - publishing with: ${
        typeof mainConfig.publisher === 'object' ? mainConfig.publisher.name : mainConfig.publisher}`);
@@ -440,7 +440,7 @@ async function s_GENERATE()
       runtimeEventProxy.on('tjsdoc:system:shutdown', () => setImmediate(s_SHUTDOWN));
 
       // Invoke a final handler to plugins signalling that initial processing is complete.
-      const keepAlive = (await mainEventbus.triggerAsync('plugins:invoke:async:event', 'onRuntimeCompleteAsync', void 0,
+      const keepAlive = (await mainEventbus.triggerAsync('plugins:async:invoke:event', 'onRuntimeCompleteAsync', void 0,
        { mainConfig, docDB, keepAlive: false, packageInfo, packageObj, pubConfig })).keepAlive;
 
       // There are cases when a plugin may want to continue processing in an ongoing manner such as
@@ -477,7 +477,7 @@ async function s_REGENERATE()
 
    // Invoke `onRegenerate` plugin callback to signal that TJSDoc is regenerating the project target. This allows
    // any internal / external plugins to reset data as necessary.
-   await mainEventbus.triggerAsync('plugins:invoke:async:event', 'onRuntimeRegenerateAsync', void 0,
+   await mainEventbus.triggerAsync('plugins:async:invoke:event', 'onRuntimeRegenerateAsync', void 0,
     { mainConfig, docDB, packageInfo, packageObj, pubConfig });
 
    // Invoke the main runtime documentation generation.
@@ -513,11 +513,11 @@ function s_SET_VERSION(packageFilePath, eventbus)
 async function s_SHUTDOWN()
 {
    // Allow any plugins a final chance to shutdown.
-   await mainEventbus.triggerAsync('plugins:invoke:async:event', 'onRuntimeShutdownAsync');
+   await mainEventbus.triggerAsync('plugins:async:invoke:event', 'onRuntimeShutdownAsync');
 
    // Remove any runtime event bindings.
    mainEventbus.triggerSync('tjsdoc:system:event:proxy:runtime:get').off();
 
    // Must destroy all plugins and have them and pluginManager unregister from the eventbus.
-   await mainEventbus.triggerAsync('plugins:destroy:manager:async');
+   await mainEventbus.triggerAsync('plugins:async:destroy:manager');
 }
