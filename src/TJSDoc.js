@@ -332,7 +332,7 @@ function s_ERR_HANDLER(err, mainConfig)
       // Create a specific message if the module is detected as a TJSDoc module.
 
       /* eslint-disable prefer-template */
-      if (packageData.bugs.url === 'https://github.com/typhonjs-doc/tjsdoc/issues')
+      if (packageData.bugs.url === 'https://github.com/typhonjs-node-tjsdoc/tjsdoc/issues')
       {
          packageMessage = 'An uncaught fatal error has been detected with a TJSDoc module.\n'
           + 'Please report this error to the issues forum after checking if a similar '
