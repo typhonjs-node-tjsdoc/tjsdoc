@@ -235,9 +235,10 @@ export default class TJSDoc
          // `mainConfig.test.sourceFiles` is not frozen as more source / test files could be added or removed during
          // `tjsdoc-plugin-watcher` execution.
          mainEventbus.trigger('typhonjs:object:util:deep:freeze', mainConfig,
-          ['_mainMenuItems', '_overflowMenuItems', 'sourceFiles']);
+          ['_mainToolbarItems', '_mainToolbarOverflowItems', 'sourceFiles']);
 
-         mainEventbus.trigger('typhonjs:object:util:deep:freeze', pubConfig, ['_mainMenuItems', '_overflowMenuItems']);
+         mainEventbus.trigger('typhonjs:object:util:deep:freeze', pubConfig,
+          ['_mainToolbarItems', '_mainToolbarOverflowItems']);
 
          // Create an event binding to return the mainConfig.
          runtimeEventProxy.on('tjsdoc:data:config:main:get', () => mainConfig);
