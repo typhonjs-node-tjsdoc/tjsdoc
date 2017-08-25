@@ -98,14 +98,22 @@ export default class TJSDoc
             throw error;
          }
 
-         // Allow any plugins which may alter `mainConfig.publisher` a chance to do so before loading. Add
-         // `mainConfig.publisherOptions` to the mainConfig to set particular options passed to the publisher.
+         // Ensure that `mainConfig.publisher` is defined.
+         if (mainConfig.publisher !== null && typeof mainConfig.publisher !== 'string' &&
+          typeof mainConfig.publisher !== 'object')
+         {
+            const error = new TypeError(`'mainConfig.publisher' is not an 'object' or 'string'.`);
+            error._objectValidateError = true;
+            throw error;
+         }
+
+         // Add publisher before runtime as additional config resolver data may be available as an event binding.
+         // `publisherOptions` potentially found in the main config is passed as plugin options to the publisher.
          await pluginManager.addAsync(typeof mainConfig.publisher === 'object' ?
           Object.assign({ options: mainConfig.publisherOptions }, mainConfig.publisher) :
            { name: mainConfig.publisher, options: mainConfig.publisherOptions });
 
-         // Allow any plugins which may alter `mainConfig.runtime` a chance to do so before loading. Add
-         // `mainConfig.runtimeOptions` to plugin mainConfig.
+         // Add the runtime with `runtimeOptions` potentially found in main config is passed as plugin options.
          await pluginManager.addAsync(typeof mainConfig.runtime === 'object' ?
           Object.assign({ options: mainConfig.runtimeOptions }, mainConfig.runtime) :
            { name: mainConfig.runtime, options: mainConfig.runtimeOptions });
@@ -279,11 +287,13 @@ export default class TJSDoc
  */
 async function s_BUILTIN_PLUGIN_VIRTUAL(pluginData, pluginManager)
 {
-   if (pluginData.type === 'require-module' && !pluginData.target.endsWith('.tjsdoc/virtual/remote'))
+   if (typeof pluginData !== 'object' && typeof pluginData.plugin !== 'object') { return; }
+
+   if (pluginData.plugin.type === 'require-module' && !pluginData.plugin.target.endsWith('.tjsdoc/virtual/remote'))
    {
       try
       {
-         const virtualRemotePluginFile = `${pluginData.target}/.tjsdoc/virtual/remote`;
+         const virtualRemotePluginFile = `${pluginData.plugin.target}/.tjsdoc/virtual/remote`;
          const virtualRemotePlugin = require(virtualRemotePluginFile);
 
          if (typeof virtualRemotePlugin.onHandleVirtual === 'function')
